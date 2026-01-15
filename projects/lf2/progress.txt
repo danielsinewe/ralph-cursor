@@ -1,0 +1,208 @@
+# Progress Log: lf2
+
+Created: 2026-01-12 09:55:14
+
+## Notes
+- Edit prd.md with your requirements
+- Run: ./ralph/convert.sh lf2
+- Then: ./ralph/start.sh lf2
+
+---
+
+## Loop 1 - 2026-01-12
+
+### Completed Stories
+- **3.1** - Refactor luma-event-form to sequential flow layout
+  - Removed 2-column grid layout (col-span-2/col-span-3)
+  - When not connected: Shows full-width centered card with Connect Luma header, API key input, connection name input, help links, and Connect button
+  - When connected: Shows full-width form with event selection dropdown and enrichment options
+  - Embedded connection form directly in component instead of using IntegrationConnectDialog
+
+- **4.1** - Add event preview image to dropdown trigger (completed as part of 3.1)
+  - Added selectedEvent cover image (24x24) in the dropdown trigger when an event is selected
+  - Gracefully handles missing images (only shows image if cover_url exists)
+
+### Codebase Patterns
+- `useIntegration` hook exposes `saveConnection` mutation for creating new connections
+- Provider config comes from `PROVIDER_REGISTRY` in `@repo/configs/src/provider-registry`
+- Connection forms need: API key input, connection name input, help links (apiKeyUrl, docsUrl)
+
+### Files Modified
+- `apps/web/src/components/project/create/components/luma-event-form.tsx`
+
+---
+
+## Loop 2 - 2026-01-12
+
+### Completed Stories
+- **1.3** - Create listLumaProjects tRPC procedure in data-sources router
+  - Added `listLumaProjects` protectedProcedure to data-sources router
+  - Queries projects where `metadata->>'integration' = 'luma-event'` for current team
+  - Returns array of { id, title, columnCount, createdAt } ordered by createdAt desc
+  - Excludes `_trigger` column from column count calculation
+
+### Codebase Patterns
+- Use `sql` tag from drizzle-orm for raw SQL expressions in where clauses (e.g., `sql\`${projects.metadata}->>'integration' = 'luma-event'\``)
+- JSONB field filtering uses PostgreSQL's `->>` operator for text extraction
+- Protected procedures automatically have access to `ctx.team.id` for team-scoped queries
+
+### Files Modified
+- `apps/web/src/trpc/router/data-sources.ts`
+
+---
+
+## Loop 3 - 2026-01-12
+
+### Verified Completed Stories
+- **3.2** - Add template selection dropdown to luma-event-form (was already implemented)
+  - Template dropdown shows after event selection with "Copy columns from:" label
+  - Uses `listLumaProjects` query to fetch existing Luma projects
+  - Default option is "None - start fresh"
+  - Projects listed with format: '📊 {title} ({columnCount} columns)'
+  - `templateProjectId` is passed to the import mutation
+  - Schema already includes `templateProjectId: z.string().optional()`
+
+### Observations
+- Stories 1.3, 3.2 were already implemented in previous loops
+- The `lumaEventImportSchema` already accepts `templateProjectId` but the actual column copying logic (story 3.3) is not yet implemented
+- Pre-existing type error in `table-header.tsx:91` unrelated to Luma feature work
+
+### Files Verified
+- `apps/web/src/components/project/create/components/luma-event-form.tsx` (lines 312-364: template dropdown)
+- `apps/web/src/trpc/router/data-sources.ts` (lines 306-339: listLumaProjects)
+- `apps/web/src/lib/core/sources/luma.ts` (line 24: templateProjectId in schema)
+
+---
+
+## Loop 4 - 2026-01-12
+
+### Completed Stories
+- **1.3** - Verified already implemented in data-sources.ts
+- **3.2** - Add template selection dropdown to luma-event-form
+  - Added `templatePopoverOpen` and `selectedTemplateId` state
+  - Added `listLumaProjects` query hook with 30s stale time
+  - Added `lumaProjects` and `selectedTemplate` derived state
+  - Added template dropdown UI after event selection with:
+    - "None - start fresh" default option
+    - Projects listed with format: '📊 {title} ({columnCount} columns)'
+  - Pass `templateProjectId` to mutation for future column copying logic
+
+### Codebase Patterns
+- Use `useMemo` for derived state from query data (e.g., `lumaProjects`, `selectedTemplate`)
+- Template/combo dropdowns use Command component from cmdk (similar pattern to event dropdown)
+- Query hooks can use `staleTime` option for caching (30s used here)
+
+### Files Modified
+- `apps/web/src/components/project/create/components/luma-event-form.tsx`
+- `apps/web/src/lib/core/sources/luma.ts` (added templateProjectId to schema)
+
+### Notes
+- Pre-existing type error in `table-header.tsx:91` is unrelated to this feature
+- Story 3.3 (column copying logic) is the next priority 1 story to implement
+
+---
+
+## Loop 5 - 2026-01-12
+
+### Verified/Fixed Stories
+- **3.3** - Implement column copying logic when template is selected (already implemented, fixed bug)
+  - Column copying logic was already implemented in `runLumaEventImport` (lines 142-254)
+  - Fixed bug: Changed `const templateProject = await getProjectByIdAndTeamId(...)` to `const { data: templateProject } = await getProjectByIdAndTeamId(...)` because the query helper returns `{ data, error }`
+  - Implementation correctly:
+    - Fetches template project using `getProjectByIdAndTeamId` (ensures team ownership)
+    - Filters out base columns (`_trigger`, `guest_status`)
+    - Generates new column IDs using `customAlphabet` from nanoid
+    - Creates ID mapping and remaps all column references:
+      - `dependencies[].columnId`
+      - `referenceConfig.parentId`
+      - `@{columnId}` mentions in taskConfig, aiConfig, filterConfig.condition
+    - Preserves column configurations when copying
+
+### Bug Fixed
+- `apps/web/src/lib/core/sources/luma.ts:145`: Fixed incorrect destructuring of `getProjectByIdAndTeamId` result
+
+### Codebase Patterns
+- Query functions in `@repo/db/queries` return `{ data, error }` via the `query()` wrapper
+- Column ID references (`@{columnId}`) appear in various meta fields (prompts, task configs, etc.) and need remapping when copying
+- Use `customAlphabet` from nanoid for generating collision-resistant column IDs
+
+### Files Modified
+- `apps/web/src/lib/core/sources/luma.ts` (line 145: fixed destructuring)
+
+---
+
+## Loop 6 - 2026-01-12
+
+### Completed Stories
+- **2.1** - Update integration-connect-dialog to validate API key before saving
+  - Added validation state tracking (`idle` | `validating` | `valid` | `invalid`)
+  - Call `validateLumaApiKey` on API key blur and before form submit
+  - Show loading spinner in input while validating
+  - Show green checkmark (CheckCircle icon) for valid API keys
+  - Show red border and error message for invalid keys: "Invalid API key. Please check your key and try again."
+  - Pre-fill connection name with `suggestedName` from validation response
+  - Disable form inputs and buttons during validation
+
+- **2.2** - Add connection name field to integration connect dialog
+  - Connection name field already existed in the codebase
+  - Pre-filling with suggestedName was added as part of 2.1 implementation
+  - All acceptance criteria now met
+
+### Codebase Patterns
+- For Luma-specific validation in a generic dialog, check `integrationId === 'luma'`
+- Use `trpc.integrations.validateLumaApiKey.useMutation()` for validation calls
+- Pre-fill fields only if user hasn't modified them (e.g., `connectionName === \`${provider?.name} Account\``)
+
+### Files Modified
+- `apps/web/src/components/integrations/integration-connect-dialog.tsx`
+
+---
+
+## Loop 7 - 2026-01-12
+
+### Completed Stories
+- **2.3** - Show connection name field on integrations settings page
+  - Added `renameIntegrationConnection` query function to `packages/db/queries.ts`
+  - Added `renameConnection` tRPC procedure to integrations router
+  - Updated `IntegrationConnectionsList` component with inline editing:
+    - Pencil icon button to start editing connection name
+    - Input field with save (checkmark) and cancel (X) buttons
+    - Keyboard shortcuts: Enter to save, Escape to cancel
+    - Loading state shown while rename is in progress
+  - Connection name is editable for all connections (including "default")
+
+### Codebase Patterns
+- Add database query functions to `packages/db/queries.ts` before creating tRPC procedures
+- Use inline editing pattern with local state (`editingConnectionName`, `editValue`) for in-place updates
+- Import `Check`, `Pencil`, `X` icons from lucide-react for editing UI
+
+### Files Modified
+- `packages/db/queries.ts` (added `renameIntegrationConnection` function)
+- `apps/web/src/trpc/router/integrations.ts` (added `renameConnection` procedure)
+- `apps/web/src/app/app/[teamSlug]/integrations/integrations-content.tsx` (added inline editing UI)
+
+---
+
+## Loop 8 - 2026-01-12
+
+### Completed Stories
+- **4.2** - Include saved Luma templates in template dropdown
+  - Added `trpc.templates.getByTeam` query to fetch team's saved templates
+  - Created `teamTemplates` derived state with columnCount calculated (excluding _trigger)
+  - Added `selectedTemplateSource` state to differentiate between project and template selections
+  - Updated dropdown UI with CommandSeparator between "Luma Projects" and "Saved Templates" sections
+  - Projects shown with 📊 icon, templates shown with 📋 icon
+  - Added `templateSource` field to `lumaEventImportSchema` (project | template)
+  - Updated column copying logic to fetch from templates table when source is 'template'
+  - Uses `getTemplateById` from @repo/db/queries for template fetching
+
+### Codebase Patterns
+- Templates table stores `columns` field with same `DbColumnType[]` structure as projects
+- `getTemplateById` returns `{ data, error }` like other query helpers
+- CommandSeparator and CommandGroup with heading for visual separation in dropdowns
+- Track selection source with separate state when dealing with items from multiple tables
+
+### Files Modified
+- `apps/web/src/components/project/create/components/luma-event-form.tsx` (template dropdown UI)
+- `apps/web/src/lib/core/sources/luma.ts` (column copying logic for templates)
+

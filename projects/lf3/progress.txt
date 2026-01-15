@@ -1,0 +1,79 @@
+# Progress Log: lf3
+
+Created: 2026-01-12 12:53:23
+
+## Notes
+- Edit prd.md with your requirements
+- Run: ./ralph/convert.sh lf3
+- Then: ./ralph/start.sh lf3
+
+## Completed Stories
+
+### Story 1.1 - Add optional subtitle prop to IntegrationConnectInline (2026-01-12)
+- Added `subtitle?: string` prop to `IntegrationConnectInlineProps` interface
+- Updated component to destructure subtitle and use it with nullish coalescing: `{subtitle ?? 'Connect to configure this column'}`
+- Default behavior preserved when subtitle is not provided
+- Commit: aa04569b
+
+### Story 2.1 - Add paste handler for Luma API key validation (2026-01-12)
+- Extracted common validation logic into `validateApiKey` useCallback function
+- Created `handleApiKeyPaste` function to handle paste events
+- Added `onPaste` handler to API key Input component
+- Paste events trigger immediate validation for keys >= 8 chars
+- Updated imports to include `ClipboardEvent` type and `useCallback`
+
+### Story 2.2 - Add exact 32-character trigger for Luma API key validation (2026-01-12)
+- Already implemented in story 2.1 commit
+- `handleApiKeyChange` at lines 116-129 already handles:
+  - Checking for exactly 32 characters (`trimmedLength === LUMA_API_KEY_LENGTH`)
+  - Triggering validateApiKey when exactly 32 chars entered
+  - Resetting validation state to idle when length changes away from 32
+- No code changes needed, marked prd.json as passes: true
+
+### Story 3.1 - Replace IntegrationAuthDialog with IntegrationConnectDialog (2026-01-12)
+- Replaced IntegrationAuthDialog with IntegrationConnectDialog in integrations-content.tsx
+- Removed ~170 lines of duplicate dialog code
+- Removed unused state: apiKey, handleSaveConnection, saveConnection mutation
+- Removed isSaving prop from IntegrationCard (dialog handles its own saving)
+- Updated onSuccess callback to call integrationsQuery.refetch()
+- Commit: dfe7f3df
+
+### Story 3.2 - Verify connection name field displays on Integrations page dialog (2026-01-12)
+- Verification story - no code changes needed
+- Connection name field exists in IntegrationConnectDialog lines 288-303
+- Default name "{Provider} Account" set via useEffect lines 48-53
+- Saves via saveConnection mutation with connectionName param (line 167)
+- Backend handles connectionName in integrations.ts saveConnection endpoint
+
+### Story 4.1 - Replace Luma Event Form inline connection form with IntegrationConnectInline (2026-01-12)
+- Added `connectDialogOpen` state variable
+- Replaced ~90 lines of inline form JSX with IntegrationConnectInline + IntegrationConnectDialog
+- Passed custom subtitle: "Connect to import event guests into your project"
+- Removed unused imports: PROVIDER_REGISTRY, ProviderDefinition, ArrowRightAlign, ExternalLink, Input
+- Removed unused state: apiKey, connectionName, isConnecting
+- Removed handleConnect function
+- onSuccess callback triggers refetch() to refresh connection state
+- Commit: 91455806
+
+### Story 4.2 - Wire up IntegrationConnectDialog onSuccess in Luma Event Form (2026-01-12)
+- Already implemented in story 4.1 commit
+- `onSuccess={() => refetch()}` at line 151 triggers useIntegration's list.refetch()
+- useIntegration hook returns query with refetch, updates isConnected state
+- Component re-renders automatically showing event selection UI
+- No code changes needed, marked prd.json as passes: true
+
+### Story 4.3 - Remove old inline form code from luma-event-form.tsx (2026-01-12)
+- Already completed in story 4.1 commit
+- Verified: no apiKey/connectionName/isConnecting state variables remain
+- Verified: no handleApiKeyBlur function exists
+- Verified: no ArrowRightLeft/ExternalLink imports remain
+- No code changes needed, marked prd.json as passes: true
+
+## Codebase Patterns
+- Pre-existing type error in `table-header.tsx:91` - unrelated to integration components
+- IntegrationConnectInline is in `apps/web/src/components/integrations/integration-connect-inline.tsx`
+- IntegrationConnectDialog is in `apps/web/src/components/integrations/integration-connect-dialog.tsx`
+- Luma API keys are 32 characters - validation triggers on paste (>=8 chars) and blur (>=8 chars)
+- Story 2.2 was already implemented as part of story 2.1 but PRD not updated
+- luma-event-form.tsx now uses shared integration components for connection flow
+

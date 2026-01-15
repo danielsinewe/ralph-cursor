@@ -1,0 +1,176 @@
+{
+  "branchName": "ralph/lf2",
+  "userStories": [
+    {
+      "id": "1.1",
+      "category": "technical",
+      "story": "Add LumaUser interface and getSelf() method to LumaClient for API key validation",
+      "steps": [
+        "Open packages/configs/src/luma/client.ts",
+        "Add LumaUser interface with api_id, name, first_name, last_name, email, avatar_url fields",
+        "Add GetSelfResponse interface wrapping LumaUser",
+        "Implement getSelf() method that calls GET /user/get-self endpoint",
+        "Return typed GetSelfResponse"
+      ],
+      "acceptance": "getSelf() method returns user info when called with valid API key and throws error for invalid key",
+      "priority": 1,
+      "passes": true,
+      "notes": "Foundation for API key validation - P1 feature"
+    },
+    {
+      "id": "1.2",
+      "category": "technical",
+      "story": "Create validateLumaApiKey tRPC procedure in integrations router",
+      "steps": [
+        "Open apps/web/src/trpc/router/integrations.ts",
+        "Add validateLumaApiKey protectedProcedure with input { apiKey: string }",
+        "Instantiate LumaClient with provided apiKey and call getSelf()",
+        "Return { valid: true, user, suggestedName } on success or { valid: false, error } on failure"
+      ],
+      "acceptance": "Procedure returns user info and suggested connection name for valid keys, error for invalid keys",
+      "priority": 1,
+      "passes": true,
+      "notes": "suggestedName format: \"{user.name}'s Luma\""
+    },
+    {
+      "id": "1.3",
+      "category": "technical",
+      "story": "Create listLumaProjects tRPC procedure in data-sources router",
+      "steps": [
+        "Open apps/web/src/trpc/router/data-sources.ts",
+        "Add listLumaProjects protectedProcedure",
+        "Query projects where metadata->>'integration' = 'luma-event' for current team",
+        "Return array of { id, title, columnCount, createdAt } ordered by createdAt desc",
+        "columnCount should exclude _trigger column"
+      ],
+      "acceptance": "Returns list of Luma projects in workspace with correct column counts",
+      "priority": 2,
+      "passes": true,
+      "notes": "Used for template selection dropdown"
+    },
+    {
+      "id": "2.1",
+      "category": "ui",
+      "story": "Update integration-connect-dialog to validate API key before saving",
+      "steps": [
+        "Open apps/web/src/components/integrations/integration-connect-dialog.tsx",
+        "Add state for validation loading and error",
+        "Call validateLumaApiKey on API key blur or form submit",
+        "Show error message if validation fails: 'Invalid API key. Please check your key and try again.'",
+        "Disable Connect button until key is validated successfully"
+      ],
+      "acceptance": "Invalid API keys show error and prevent connection creation; valid keys allow connection",
+      "priority": 2,
+      "passes": true,
+      "notes": "This prevents failed imports from invalid API keys"
+    },
+    {
+      "id": "2.2",
+      "category": "ui",
+      "story": "Add connection name field to integration connect dialog",
+      "steps": [
+        "In integration-connect-dialog.tsx, add connectionName input field below API key",
+        "Pre-fill connectionName with suggestedName from validateLumaApiKey response",
+        "Make field editable by user",
+        "Pass connectionName to save mutation",
+        "Add helper text: 'A friendly name to identify this connection'"
+      ],
+      "acceptance": "Connection name field appears, is pre-filled after validation, and saves with connection",
+      "priority": 2,
+      "passes": true,
+      "notes": "connectionName field already existed, pre-filling added as part of 2.1"
+    },
+    {
+      "id": "2.3",
+      "category": "ui",
+      "story": "Show connection name field on integrations settings page",
+      "steps": [
+        "Open apps/web/src/app/app/[teamSlug]/integrations/integrations-content.tsx",
+        "Display connectionName in existing connections list",
+        "Allow editing connectionName for existing connections"
+      ],
+      "acceptance": "Users can see and edit connection names on integrations page",
+      "priority": 3,
+      "passes": true,
+      "notes": "Added renameIntegrationConnection query, renameConnection tRPC procedure, and inline editing UI"
+    },
+    {
+      "id": "3.1",
+      "category": "ui",
+      "story": "Refactor luma-event-form to sequential flow layout",
+      "steps": [
+        "Open apps/web/src/components/project/create/components/luma-event-form.tsx",
+        "Remove existing 2-column layout structure",
+        "Create conditional rendering based on connection state",
+        "When not connected: show full-width centered card with 'Connect Luma' header, description, API key input, connection name input, and Connect button",
+        "When connected: show full-width form with 'Select your event' header and event dropdown"
+      ],
+      "acceptance": "Form shows either connection UI or event selection UI full-width based on connection state - no 2-column layout",
+      "priority": 1,
+      "passes": true,
+      "notes": "P0 - core UX improvement for sequential connection flow"
+    },
+    {
+      "id": "3.2",
+      "category": "ui",
+      "story": "Add template selection dropdown to luma-event-form",
+      "steps": [
+        "In luma-event-form.tsx, add 'Copy columns from:' dropdown after event selection",
+        "Fetch existing Luma projects using listLumaProjects query",
+        "Show 'None - start fresh' as default option",
+        "List projects with format: '📊 {title} ({columnCount} columns)'",
+        "Store selected template project ID in form state"
+      ],
+      "acceptance": "Dropdown shows existing Luma projects with column counts; 'None - start fresh' is default",
+      "priority": 1,
+      "passes": true,
+      "notes": "P0 - Template copying UI component"
+    },
+    {
+      "id": "3.3",
+      "category": "functional",
+      "story": "Implement column copying logic when template is selected",
+      "steps": [
+        "In project creation flow, if template project ID is selected, fetch source project columns",
+        "Filter out _trigger column from source columns",
+        "Generate new column IDs for each copied column to avoid conflicts",
+        "Merge copied columns with fresh Luma base columns (_trigger) and optional approval column",
+        "Update column dependencies/references to use new IDs"
+      ],
+      "acceptance": "Creating project with template copies all columns (except _trigger) with new IDs; column configurations preserved",
+      "priority": 1,
+      "passes": true,
+      "notes": "P0 - Core template copying logic"
+    },
+    {
+      "id": "4.1",
+      "category": "ui",
+      "story": "Add event preview image to dropdown trigger when event is selected",
+      "steps": [
+        "In luma-event-form.tsx, update event dropdown trigger component",
+        "When event is selected, show event cover_url image (48x48, rounded) left of event name",
+        "If cover_url is null, show only event name without image placeholder",
+        "Use Next.js Image component for optimized loading"
+      ],
+      "acceptance": "Selected event shows cover image in dropdown trigger; gracefully handles missing images",
+      "priority": 4,
+      "passes": true,
+      "notes": "P2 polish feature - implemented as part of 3.1"
+    },
+    {
+      "id": "4.2",
+      "category": "ui",
+      "story": "Include saved Luma templates in template dropdown",
+      "steps": [
+        "Query saved Luma templates (not just projects) for the team",
+        "Add separator in dropdown between projects and templates",
+        "Show templates with format: '📋 {title} ({columnCount} columns)'",
+        "Handle template selection same as project selection"
+      ],
+      "acceptance": "Template dropdown shows both Luma projects and saved Luma templates with visual separation",
+      "priority": 5,
+      "passes": true,
+      "notes": "P2 polish feature - depends on template system existing"
+    }
+  ]
+}

@@ -1,0 +1,249 @@
+{
+  "branchName": "r/waterfall",
+  "userStories": [
+    {
+      "id": "1.1",
+      "category": "technical",
+      "story": "Add WaterfallConfig and WaterfallProvider types to column.ts",
+      "steps": [
+        "Define WaterfallConfig interface with waterfallType, providers, inputMapping",
+        "Define WaterfallProvider interface with id, taskType, enabled, order, fieldMapping",
+        "Define WaterfallInputMapping interface with first_name, last_name, full_name, domain",
+        "Add mentionable optional field to column meta schema"
+      ],
+      "acceptance": "Types compile without errors and can be imported in web/workers apps",
+      "priority": 1,
+      "passes": true,
+      "notes": "Foundation types needed before any other implementation"
+    },
+    {
+      "id": "1.2",
+      "category": "technical",
+      "story": "Create waterfall-registry.ts with provider definitions and field mappings",
+      "steps": [
+        "Create packages/configs/src/waterfall-registry.ts",
+        "Define EMAIL_WATERFALL_STANDARD_FIELDS constant",
+        "Create provider-to-standard field mapping for findymailFindByName",
+        "Create provider-to-standard field mapping for hunterFindEmail",
+        "Export getWaterfallProviders() and getProviderFieldMapping() helpers"
+      ],
+      "acceptance": "Registry correctly maps standard fields to each provider's field requirements",
+      "priority": 1,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "1.3",
+      "category": "technical",
+      "story": "Add waterfallEmail task definition to task-registry.ts",
+      "steps": [
+        "Add waterfallEmail task with id, label, description, defaultHeader",
+        "Set dataShape to 'group' for parent column",
+        "Define configSchema with providers array and inputMapping object",
+        "Implement validate function checking providers length and input requirements",
+        "Set cost type to 'dynamic' with range 0-40000"
+      ],
+      "acceptance": "waterfallEmail appears in task registry and validation logic works correctly",
+      "priority": 2,
+      "passes": true,
+      "notes": "Depends on 1.1 for types"
+    },
+    {
+      "id": "2.1",
+      "category": "functional",
+      "story": "Implement waterfall execution logic in worker",
+      "steps": [
+        "Create apps/workers/src/workers/row-run/waterfall-executor.ts",
+        "Implement runWaterfallEmail function with sequential provider execution",
+        "Add logic to stop on first successful email result",
+        "Mark remaining providers as 'skipped' after success",
+        "Handle provider errors and continue to next provider"
+      ],
+      "acceptance": "Waterfall executes providers in order, stops on success, handles errors gracefully",
+      "priority": 3,
+      "passes": true,
+      "notes": "Implemented in waterfall-executor.ts with runWaterfallEmail function"
+    },
+    {
+      "id": "2.2",
+      "category": "functional",
+      "story": "Implement input field mapping and transformation",
+      "steps": [
+        "Create resolveInputMapping function to get values from column references",
+        "Create mapInputsToProvider function to transform standard fields to provider fields",
+        "Implement full_name split logic (first space) for providers needing first/last",
+        "Implement first/last join logic for providers needing full_name"
+      ],
+      "acceptance": "Field transformations work correctly: 'John Doe' splits to John/Doe, first+last joins to full name",
+      "priority": 3,
+      "passes": true,
+      "notes": "Already implemented as part of 2.1 - resolveInputMapping in waterfall-executor.ts, transformInputsForProvider in waterfall-registry.ts"
+    },
+    {
+      "id": "2.3",
+      "category": "functional",
+      "story": "Implement email extraction from provider responses",
+      "steps": [
+        "Create extractEmailFromResult function with provider-specific logic",
+        "Handle Findymail response format: result.contact.email",
+        "Handle Hunter response format: result.data.email",
+        "Implement isValidEmail helper for basic email validation"
+      ],
+      "acceptance": "Email extraction works for all supported providers and validates email format",
+      "priority": 3,
+      "passes": true,
+      "notes": "Already implemented as part of 2.1 - extractEmailFromResult and isValidEmail in waterfall-executor.ts"
+    },
+    {
+      "id": "2.4",
+      "category": "functional",
+      "story": "Integrate waterfall executor into run-task.ts",
+      "steps": [
+        "Import waterfall executor in run-task.ts",
+        "Add waterfallEmail case in task type switch",
+        "Pass config, columnValues, teamId, projectId to executor",
+        "Distribute results to child columns based on provider keys"
+      ],
+      "acceptance": "Waterfall tasks execute when triggered and results populate correct child columns",
+      "priority": 4,
+      "passes": true,
+      "notes": "Integrated into row-run.worker.ts saveColumnResultToDb - distributes results to child columns based on provider keys"
+    },
+    {
+      "id": "3.1",
+      "category": "functional",
+      "story": "Create waterfall column with auto-generated children",
+      "steps": [
+        "Create createWaterfallColumn function in apps/web/src/lib/table/",
+        "Generate result child column with mentionable: true",
+        "Generate provider child columns with mentionable: false",
+        "Set parent column dataShape to 'group' with children array",
+        "Extract dependencies from inputMapping column references"
+      ],
+      "acceptance": "Creating waterfall column generates correct parent and child structure",
+      "priority": 4,
+      "passes": true,
+      "notes": "Created create-waterfall-column.ts with createWaterfallColumn, updateWaterfallColumnProviders, and updateWaterfallDependencies functions"
+    },
+    {
+      "id": "3.2",
+      "category": "functional",
+      "story": "Filter non-mentionable columns from usableLeafColumns",
+      "steps": [
+        "Locate usableLeafColumns population logic in grid-store.ts",
+        "Add filter condition checking meta.mentionable !== false",
+        "Ensure provider child columns are excluded from column mentions"
+      ],
+      "acceptance": "Only result column appears in column reference dropdowns, provider columns hidden",
+      "priority": 4,
+      "passes": true,
+      "notes": "Implemented in getUsableLeafColumns() in apps/web/src/lib/table/utils.ts - filters out columns with meta.mentionable === false"
+    },
+    {
+      "id": "4.1",
+      "category": "ui",
+      "story": "Create waterfall-settings.tsx configuration component",
+      "steps": [
+        "Create apps/web/src/components/table/columns/waterfall-settings.tsx",
+        "Add input fields section for first_name, last_name, full_name, domain",
+        "Use existing column reference input component for field mapping",
+        "Add providers list section that renders WaterfallProviderList",
+        "Show estimated cost range at bottom"
+      ],
+      "acceptance": "Settings panel renders with all input fields and provider list",
+      "priority": 5,
+      "passes": true,
+      "notes": "Created WaterfallSettings in waterfall-settings.tsx with MentionInputArea for input fields and WaterfallProviderList for provider management"
+    },
+    {
+      "id": "4.2",
+      "category": "ui",
+      "story": "Create waterfall-provider-list.tsx with drag-drop reordering",
+      "steps": [
+        "Create apps/web/src/components/table/columns/waterfall-provider-list.tsx",
+        "Implement draggable list using existing dnd library",
+        "Show provider name, cost, and enable/disable checkbox per item",
+        "Show connection status warning if provider key not configured",
+        "Add 'Add Provider' button that opens provider selection dropdown"
+      ],
+      "acceptance": "Providers can be added, removed, reordered, and toggled on/off",
+      "priority": 5,
+      "passes": true,
+      "notes": "Implemented in waterfall-provider-list.tsx using Sortable UI components - includes drag-drop, enable/disable, remove, and connection status"
+    },
+    {
+      "id": "4.3",
+      "category": "ui",
+      "story": "Create provider selection dropdown component",
+      "steps": [
+        "Create dropdown showing available email providers from waterfall registry",
+        "Display provider name, description, and cost per item",
+        "Show warning icon for providers requiring API key setup",
+        "Add selected provider to list on click"
+      ],
+      "acceptance": "Dropdown shows available providers with costs and connection status",
+      "priority": 5,
+      "passes": true,
+      "notes": "ProviderOption component in waterfall-provider-list.tsx shows name, description, cost, and warning icon for providers needing keys"
+    },
+    {
+      "id": "4.4",
+      "category": "ui",
+      "story": "Register waterfallEmail in task-field-settings-registry.tsx",
+      "steps": [
+        "Import WaterfallSettings component",
+        "Add waterfallEmail case that renders WaterfallSettings",
+        "Pass config, onChange, and column context props"
+      ],
+      "acceptance": "Selecting waterfallEmail task type shows waterfall configuration panel",
+      "priority": 6,
+      "passes": true,
+      "notes": "Imported WaterfallSettings, added waterfallEmail case, excluded from centralized dependency aggregation and dynamic field rendering"
+    },
+    {
+      "id": "5.1",
+      "category": "ui",
+      "story": "Display waterfall column headers correctly in data grid",
+      "steps": [
+        "Ensure parent waterfall column shows group header with children",
+        "Display result column with 'Email' header",
+        "Display provider columns with provider task labels"
+      ],
+      "acceptance": "Data grid shows waterfall column with collapsible child columns",
+      "priority": 6,
+      "passes": true,
+      "notes": "Added PiStackLight icon for waterfallEmail in DataShapeIcon and taskIconMap. Group column infrastructure from 3.1 handles multi-level headers via TanStack Table's nested columns structure."
+    },
+    {
+      "id": "5.2",
+      "category": "ui",
+      "story": "Display cell status correctly for waterfall results",
+      "steps": [
+        "Show email value in result column for successful finds",
+        "Show '(skipped)' for provider columns that were skipped",
+        "Show '(not found)' for providers that completed without email",
+        "Show loading spinner for in-progress provider execution"
+      ],
+      "acceptance": "Cell displays correctly reflect execution status and results",
+      "priority": 6,
+      "passes": true,
+      "notes": "Fixed worker to save proper childStatus (skipped/error) instead of always 'complete'. Added italic muted styling for (skipped) and (not found) values in editable-grid-cell.tsx."
+    },
+    {
+      "id": "6.1",
+      "category": "technical",
+      "story": "Test waterfall execution with Findymail and Hunter providers",
+      "steps": [
+        "Create test project with waterfall column",
+        "Configure Findymail as first provider, Hunter as second",
+        "Run on test data where Findymail succeeds",
+        "Run on test data where Findymail fails but Hunter succeeds",
+        "Run on test data where both fail"
+      ],
+      "acceptance": "All three scenarios execute correctly with proper result distribution",
+      "priority": 7,
+      "passes": false,
+      "notes": "Integration testing"
+    }
+  ]
+}

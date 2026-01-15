@@ -1,0 +1,24 @@
+{
+  "state": "CLOSED",
+  "no_progress_count": 0,
+  "same_error_count": 0,
+  "last_error": "",
+  "last_files_changed": 3,
+  "last_output_length": 1171,
+  "history": [
+    {
+      "loop": 1,
+      "timestamp": "2026-01-12T05:10:08Z",
+      "files_changed": 1,
+      "output_length": 981
+    },
+    {
+      "loop": 2,
+      "timestamp": "2026-01-12T05:12:32Z",
+      "files_changed": 3,
+      "output_length": 1171
+    }
+  ],
+  "opened_at": null,
+  "opened_reason": null
+}

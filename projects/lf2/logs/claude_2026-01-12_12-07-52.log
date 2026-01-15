@@ -1,0 +1,43 @@
+I've successfully completed story 3.1 (and incidentally 4.1 which was part of the same implementation). Here's a summary:
+
+## Summary
+
+**Story 3.1: Refactor luma-event-form to sequential flow layout** - COMPLETE
+
+### Changes Made:
+1. **Removed the 2-column grid layout** - The old layout had `grid-cols-5` with `col-span-2` (connection) and `col-span-3` (event selection) side by side
+
+2. **Implemented sequential flow based on connection state**:
+   - **When NOT connected**: Full-width centered card with:
+     - Fluar <-> Luma logo header
+     - "Connect Luma" title and description
+     - API key input field
+     - Connection name input field
+     - Help links (Get API Key, Documentation)
+     - Connect button
+   
+   - **When connected**: Full-width form with:
+     - "Select your event" header
+     - Event dropdown with search
+     - Event preview image in trigger when selected (this also satisfied story 4.1)
+     - Enrichment options
+     - Create Project button
+
+3. **Embedded connection logic directly in component** - Removed dependency on `IntegrationConnectDialog` and `IntegrationConnectInline` components, using `useIntegration`'s `saveConnection` mutation directly
+
+### Files Modified:
+- `apps/web/src/components/project/create/components/luma-event-form.tsx`
+
+### Status:
+- Typecheck passes (the only error is pre-existing in `table-header.tsx`)
+- Changes committed and pushed to `feat/luma` branch
+
+---RALPH_STATUS---
+STATUS: IN_PROGRESS
+TASKS_COMPLETED_THIS_LOOP: 2
+FILES_MODIFIED: 1
+TESTS_STATUS: NOT_RUN
+WORK_TYPE: IMPLEMENTATION
+EXIT_SIGNAL: false
+RECOMMENDATION: Continue with story 1.3 (listLumaProjects tRPC procedure) or 3.2 (template selection dropdown) - both are priority 1-2
+---END_RALPH_STATUS---

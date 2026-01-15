@@ -1,0 +1,19 @@
+## Summary
+
+Created tasks from the Integration Connection UI Consistency PRD:
+
+**prd.json** - 12 user stories organized by priority:
+- **Priority 1**: Add subtitle prop to IntegrationConnectInline
+- **Priority 2**: Luma validation improvements (paste handler, 32-char trigger)
+- **Priority 3**: Replace IntegrationAuthDialog on Integrations page
+- **Priority 4**: Replace inline form in Luma Event Form
+- **Priority 5**: Cleanup old code
+- **Priority 6**: End-to-end testing (3 flows)
+
+**requirements.md** - Technical specifications covering:
+- 4 files to modify
+- Component API changes for IntegrationConnectInline and IntegrationConnectDialog
+- Validation trigger matrix for Luma API keys
+- Code to add/remove for each file
+- Edge case handling
+- Testing requirements

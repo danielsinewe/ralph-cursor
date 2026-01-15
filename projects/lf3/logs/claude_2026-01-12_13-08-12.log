@@ -1,0 +1,25 @@
+Story 1.1 is complete. Here's the summary:
+
+**Completed Story 1.1**: Add optional subtitle prop to IntegrationConnectInline component
+
+**Changes Made**:
+1. Added `subtitle?: string` prop to `IntegrationConnectInlineProps` interface
+2. Updated component to destructure subtitle from props
+3. Used nullish coalescing (`??`) to provide default text: `{subtitle ?? 'Connect to configure this column'}`
+
+**Files Modified**: 1
+- `apps/web/src/components/integrations/integration-connect-inline.tsx`
+
+**Commit**: aa04569b pushed to `feat/luma`
+
+**Note**: There is a pre-existing type error in `table-header.tsx:91` that was present before my changes and is unrelated to the integration components.
+
+---RALPH_STATUS---
+STATUS: COMPLETE
+TASKS_COMPLETED_THIS_LOOP: 1
+FILES_MODIFIED: 1
+TESTS_STATUS: NOT_RUN
+WORK_TYPE: IMPLEMENTATION
+EXIT_SIGNAL: false
+RECOMMENDATION: Continue with story 2.1 - Add paste handler for Luma API key validation in IntegrationConnectDialog
+---END_RALPH_STATUS---

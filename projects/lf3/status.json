@@ -1,0 +1,10 @@
+{
+    "timestamp": "2026-01-12T05:39:46Z",
+    "status": "usage_limit",
+    "loop_count": 1,
+    "current_story": "",
+    "stories_complete": 3,
+    "stories_total": 11,
+    "calls_this_hour": 2,
+    "max_calls_per_hour": 100
+}

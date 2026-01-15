@@ -1,0 +1,17 @@
+{
+    "timestamp": "2026-01-12T04:34:43Z",
+    "output_length": 2,
+    "has_status_block": false,
+    "status": "",
+    "tasks_completed": 0,
+    "files_modified": 0,
+    "tests_status": "NOT_RUN",
+    "work_type": "UNKNOWN",
+    "exit_signal": false,
+    "recommendation": "",
+    "completion_signals": 0,
+    "has_errors": false,
+    "error_count": 0,
+    "error_message": "",
+    "is_test_only": false
+}

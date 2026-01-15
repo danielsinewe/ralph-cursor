@@ -1,0 +1,31 @@
+Both files have been updated. Here's a summary:
+
+## Summary
+
+### prd.json - 16 User Stories
+
+**Technical (4 stories):**
+- 1.1: Add waterfall types to column.ts (priority 1)
+- 1.2: Create waterfall-registry.ts with provider mappings (priority 1)
+- 1.3: Add waterfallEmail task to task-registry.ts (priority 2)
+- 6.1: Integration testing with Findymail/Hunter (priority 7)
+
+**Functional (6 stories):**
+- 2.1-2.4: Worker execution logic, field mapping, email extraction, integration (priority 3-4)
+- 3.1-3.2: Column creation with children, mentionability filtering (priority 4)
+
+**UI (6 stories):**
+- 4.1-4.4: Settings component, drag-drop provider list, selection dropdown, registry (priority 5-6)
+- 5.1-5.2: Data grid headers and cell status display (priority 6)
+
+### requirements.md - Technical Specifications
+
+Covers:
+- System architecture and file structure
+- Data models (WaterfallConfig, WaterfallProvider, WaterfallResult)
+- Provider field mapping rules
+- UI requirements for configuration panel and data grid
+- Execution flow and success criteria
+- Error handling scenarios
+- Security and performance considerations
+- MVP provider list (Findymail, Hunter)

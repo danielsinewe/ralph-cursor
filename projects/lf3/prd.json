@@ -1,0 +1,171 @@
+{
+  "branchName": "ralph/lf3",
+  "userStories": [
+    {
+      "id": "1.1",
+      "category": "ui",
+      "story": "Add optional subtitle prop to IntegrationConnectInline component",
+      "steps": [
+        "Add subtitle prop to IntegrationConnectInlineProps interface",
+        "Update component to render subtitle prop with fallback to default text",
+        "Test with and without subtitle prop"
+      ],
+      "acceptance": "IntegrationConnectInline accepts optional subtitle prop and falls back to 'Connect to configure this column' when not provided",
+      "priority": 1,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "2.1",
+      "category": "functional",
+      "story": "Add paste handler for Luma API key validation in IntegrationConnectDialog",
+      "steps": [
+        "Create handleApiKeyPaste function to handle paste events",
+        "Extract common validation logic into validateApiKey function",
+        "Add onPaste handler to API key Input component",
+        "Test paste triggers validation for keys >= 8 chars"
+      ],
+      "acceptance": "Pasting a Luma API key (>= 8 chars) triggers immediate validation",
+      "priority": 2,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "2.2",
+      "category": "functional",
+      "story": "Add exact 32-character trigger for Luma API key validation",
+      "steps": [
+        "Update handleApiKeyChange to check for exactly 32 characters",
+        "Reset validation state when key length changes away from 32",
+        "Trigger validateApiKey when exactly 32 chars entered",
+        "Test validation triggers only at 32 chars, not 31 or 33"
+      ],
+      "acceptance": "Typing Luma API key triggers validation exactly when 32 characters are entered",
+      "priority": 2,
+      "passes": true,
+      "notes": "Already implemented in story 2.1 commit - handleApiKeyChange at lines 116-129"
+    },
+    {
+      "id": "3.1",
+      "category": "ui",
+      "story": "Replace IntegrationAuthDialog with IntegrationConnectDialog on Integrations page",
+      "steps": [
+        "Import IntegrationConnectDialog component",
+        "Replace IntegrationAuthDialog usage with IntegrationConnectDialog",
+        "Update dialog props (integrationId, onSuccess callbacks)",
+        "Remove IntegrationAuthDialog component definition from file",
+        "Remove unused state variables (apiKey, handleSaveConnection)"
+      ],
+      "acceptance": "Integrations page uses IntegrationConnectDialog for all connection flows",
+      "priority": 3,
+      "passes": true,
+      "notes": "Removed ~170 lines of duplicate code. IntegrationConnectDialog handles connection name field and Luma validation."
+    },
+    {
+      "id": "3.2",
+      "category": "ui",
+      "story": "Verify connection name field displays on Integrations page dialog",
+      "steps": [
+        "Open Connect dialog for any integration",
+        "Verify connection name input field is visible",
+        "Verify default connection name is set to '{Provider} Account'",
+        "Test saving connection with custom name"
+      ],
+      "acceptance": "Connection name field appears in dialog and saves correctly",
+      "priority": 3,
+      "passes": true,
+      "notes": "Verified: connection name field in integration-connect-dialog.tsx lines 288-303, default set at lines 48-53, saves via saveConnection mutation line 167"
+    },
+    {
+      "id": "4.1",
+      "category": "ui",
+      "story": "Replace Luma Event Form inline connection form with IntegrationConnectInline",
+      "steps": [
+        "Add connectDialogOpen state variable",
+        "Replace inline form JSX with IntegrationConnectInline component",
+        "Pass custom subtitle: 'Connect to import event guests into your project'",
+        "Add IntegrationConnectDialog with open/onOpenChange handlers"
+      ],
+      "acceptance": "Luma Event Form shows IntegrationConnectInline with custom subtitle when not connected",
+      "priority": 4,
+      "passes": true,
+      "notes": "Removed ~90 lines of inline form code. Added IntegrationConnectInline with custom subtitle and IntegrationConnectDialog."
+    },
+    {
+      "id": "4.2",
+      "category": "functional",
+      "story": "Wire up IntegrationConnectDialog onSuccess in Luma Event Form",
+      "steps": [
+        "Add onSuccess handler that calls refetch()",
+        "Test connection flow transitions to event selection after success",
+        "Verify no page refresh needed after connecting"
+      ],
+      "acceptance": "After successful connection in Luma Event Form, event selection UI appears automatically",
+      "priority": 4,
+      "passes": true,
+      "notes": "Already implemented in story 4.1 commit. onSuccess={() => refetch()} at line 151 triggers integration list refresh, isConnected updates, component re-renders to event selection UI."
+    },
+    {
+      "id": "4.3",
+      "category": "technical",
+      "story": "Remove old inline form code from luma-event-form.tsx",
+      "steps": [
+        "Remove custom form JSX (~90 lines)",
+        "Remove related state variables (apiKey, connectionName form state if duplicated)",
+        "Remove handleApiKeyBlur if no longer needed",
+        "Verify no dead code remains"
+      ],
+      "acceptance": "luma-event-form.tsx has no duplicate connection form code",
+      "priority": 5,
+      "passes": true,
+      "notes": "Already completed in story 4.1 commit. Verified: no apiKey/connectionName/isConnecting state, no handleApiKeyBlur, no ArrowRightLeft/ExternalLink imports remain."
+    },
+    {
+      "id": "5.1",
+      "category": "functional",
+      "story": "End-to-end test: Luma Event Form connection flow",
+      "steps": [
+        "Start with no Luma connection",
+        "Verify IntegrationConnectInline displays with correct subtitle",
+        "Click Connect, verify dialog opens",
+        "Enter API key, verify validation",
+        "Save connection, verify event selection appears"
+      ],
+      "acceptance": "Complete Luma Event Form connection flow works without errors",
+      "priority": 6,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "5.2",
+      "category": "functional",
+      "story": "End-to-end test: Integrations page connection flow",
+      "steps": [
+        "Navigate to Integrations page",
+        "Click Connect on any integration",
+        "Verify connection name field displays",
+        "For Luma: verify API key validation on paste/32-chars",
+        "Save connection, verify list refreshes"
+      ],
+      "acceptance": "Complete Integrations page connection flow works for all providers",
+      "priority": 6,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "5.3",
+      "category": "functional",
+      "story": "End-to-end test: Column Settings connection flow (regression)",
+      "steps": [
+        "Create column requiring integration",
+        "Verify IntegrationConnectInline displays",
+        "Connect via dialog",
+        "Verify Luma validation improvements work here too"
+      ],
+      "acceptance": "Existing Column Settings connection flow still works with validation improvements",
+      "priority": 6,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}

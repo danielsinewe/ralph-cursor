@@ -1,0 +1,32 @@
+I have successfully completed story 2.3. Here's a summary:
+
+## Summary
+
+**Story 2.3 - Show connection name field on integrations settings page** is now complete.
+
+### Changes Made:
+1. **packages/db/queries.ts**: Added `renameIntegrationConnection` function to update connection names in the database
+
+2. **apps/web/src/trpc/router/integrations.ts**: Added `renameConnection` tRPC procedure that validates input and calls the database function
+
+3. **apps/web/src/app/app/[teamSlug]/integrations/integrations-content.tsx**: 
+   - Added inline editing UI with a pencil icon to start editing
+   - Input field appears when editing with save (checkmark) and cancel (X) buttons
+   - Keyboard shortcuts: Enter to save, Escape to cancel
+   - Loading spinner shown while rename is in progress
+   - Connection name is displayed and editable for all connections
+
+### Files Modified:
+- `packages/db/queries.ts`
+- `apps/web/src/trpc/router/integrations.ts`
+- `apps/web/src/app/app/[teamSlug]/integrations/integrations-content.tsx`
+
+---RALPH_STATUS---
+STATUS: COMPLETE
+TASKS_COMPLETED_THIS_LOOP: 1
+FILES_MODIFIED: 3
+TESTS_STATUS: NOT_RUN
+WORK_TYPE: IMPLEMENTATION
+EXIT_SIGNAL: false
+RECOMMENDATION: Continue with story 4.2 (priority 5) - Include saved Luma templates in template dropdown
+---END_RALPH_STATUS---

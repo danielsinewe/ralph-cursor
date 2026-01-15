@@ -1,0 +1,38 @@
+Both files are now comprehensive. Here's a summary of what was created:
+
+## Summary
+
+### prd.json (11 User Stories)
+Organized into 4 priority groups:
+
+**Priority 1 (P0 - Implement First):**
+- 1.1: Add LumaUser interface and getSelf() method to LumaClient (technical)
+- 1.2: Create validateLumaApiKey tRPC procedure (technical)
+- 3.1: Refactor luma-event-form to sequential flow layout (ui)
+- 3.2: Add template selection dropdown to luma-event-form (ui)
+- 3.3: Implement column copying logic (functional)
+
+**Priority 2 (P1):**
+- 1.3: Create listLumaProjects tRPC procedure (technical)
+- 2.1: Update integration-connect-dialog to validate API key (ui)
+- 2.2: Add connection name field to integration connect dialog (ui)
+
+**Priority 3:**
+- 2.3: Show connection name field on integrations settings page (ui)
+
+**Priority 4-5 (P2 Polish):**
+- 4.1: Add event preview image to dropdown trigger (ui)
+- 4.2: Include saved Luma templates in template dropdown (ui)
+
+### requirements.md (Technical Specifications)
+Includes:
+1. **System Architecture** - Component diagram showing frontend → tRPC → external APIs flow
+2. **Data Models** - Existing types and new LumaUser/GetSelfResponse interfaces
+3. **API Specifications** - getSelf(), validateLumaApiKey, listLumaProjects with input/output types
+4. **UI Requirements** - Sequential flow layout, template dropdown structure, event preview specs
+5. **Column Copying Logic** - Implementation details with dependency remapping
+6. **Performance Requirements** - Latency targets and caching strategy
+7. **Security Considerations** - API key handling, access control, input validation
+8. **Error Handling** - Network and business logic error messages
+9. **Files to Modify** - Backend and frontend file list with changes
+10. **Testing Requirements** - Unit tests, integration tests, manual checklist

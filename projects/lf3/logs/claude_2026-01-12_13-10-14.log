@@ -1,0 +1,27 @@
+Story 2.1 is complete. Here's what was implemented:
+
+**Story 2.1 - Add paste handler for Luma API key validation**
+
+Changes made to `apps/web/src/components/integrations/integration-connect-dialog.tsx`:
+
+1. **Added imports**: `ClipboardEvent` type and `useCallback` hook
+2. **Extracted `validateApiKey` function**: Common validation logic wrapped in `useCallback` that handles:
+   - Checking if integration is Luma
+   - Validating key length (>= 8 chars)
+   - Setting validation state
+   - Calling the API mutation
+   - Auto-populating connection name on success
+3. **Added `handleApiKeyPaste` function**: Handles paste events by extracting pasted text, trimming it, and triggering validation if >= 8 chars
+4. **Added `onPaste` handler to Input**: Connected the paste handler to the API key input field
+
+The existing `handleApiKeyBlur` was simplified to use the new `validateApiKey` function.
+
+---RALPH_STATUS---
+STATUS: IN_PROGRESS
+TASKS_COMPLETED_THIS_LOOP: 1
+FILES_MODIFIED: 3
+TESTS_STATUS: PASSING
+WORK_TYPE: IMPLEMENTATION
+EXIT_SIGNAL: false
+RECOMMENDATION: Continue with Story 2.2 - Add exact 32-character trigger for Luma API key validation
+---END_RALPH_STATUS---
