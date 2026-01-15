@@ -4,6 +4,20 @@ Ralph is an autonomous development loop system that uses Claude Code to iterativ
 
 ## Quick Start
 
+To add Ralph to your existing project, copy the entire `ralph` directory into your repo:
+
+```bash
+cp -r path/to/ralph your-project/
+```
+
+Or if you are starting from this repo, clone and copy:
+
+```bash
+git clone https://github.com/ky-zo/ralph.git
+cp -r ralph your-project/
+   ```
+
+
 ```bash
 # 1. Create a new project
 ./ralph/new.sh my-feature
