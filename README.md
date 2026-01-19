@@ -1,6 +1,13 @@
 # Ralph - Autonomous AI Development Loop
 
-Ralph is an autonomous development loop system that uses Claude Code to iteratively implement features from a PRD (Product Requirements Document).
+Ralph is an autonomous development loop system that uses **Cursor Agent** (or Claude Code) to iteratively implement features from a PRD (Product Requirements Document).
+
+## Key Features
+
+- ✅ **Cursor Agent Support** - Use Cursor's powerful AI agent for autonomous development (default)
+- ✅ **Claude Code Compatible** - Can also use Claude Code CLI as alternative
+- ✅ **Zero Configuration** - Works out of the box with Cursor Agent
+- ✅ **Full Feature Parity** - All original Ralph features included
 
 ## Quick Start
 
@@ -37,10 +44,41 @@ code ralph/projects/my-feature/prd.md
 ```bash
 # Install dependencies
 brew install jq tmux coreutils
+
+# Cursor Agent (default, recommended)
+# Cursor Agent comes with Cursor IDE - no separate install needed
+# Just ensure 'agent' is in your PATH (~/.local/bin/agent)
+# If not, add to ~/.zshrc or ~/.bashrc:
+# export PATH="$HOME/.local/bin:$PATH"
+
+# OR install Claude Code (alternative)
 npm install -g @anthropic-ai/claude-code
 ```
 
-### Chrome DevTools MCP (Optional)
+## Configuration
+
+Ralph uses **Cursor Agent by default**. To switch to Claude Code, edit `start.sh`:
+
+```bash
+# Default (Cursor Agent) - in start.sh
+CLAUDE_CMD="agent --print --force"
+
+# Alternative (Claude Code) - change in start.sh
+CLAUDE_CMD="claude --dangerously-skip-permissions"
+```
+
+### Why Cursor Agent?
+
+| Feature | Claude Code | Cursor Agent |
+|---------|-------------|--------------|
+| API Limits | Yes (100 calls/hour) | No limits |
+| Cost | Paid API usage | Free with Cursor IDE |
+| File Editing | ✅ | ✅ |
+| Shell Commands | ✅ | ✅ (with --force) |
+| Setup | npm install | Built-in with Cursor |
+| Rate Limits | Strict | None |
+
+### Chrome DevTools MCP (Optional - Claude Code only)
 
 For browser debugging capabilities with Claude Code, add the Chrome DevTools MCP server:
 
@@ -61,7 +99,7 @@ Create a new project from template.
 ```
 
 ### `./ralph/convert.sh <project-name>`
-Convert your PRD.md to actionable JSON tasks using Claude.
+Convert your PRD.md to actionable JSON tasks using Cursor Agent (or Claude).
 
 ```bash
 ./ralph/convert.sh signals
@@ -89,7 +127,7 @@ Run the autonomous development loop.
 Options:
 - `-m, --monitor` - Start with tmux session and live monitor
 - `-c, --calls NUM` - Max calls per hour (default: 100)
-- `-t, --timeout MIN` - Claude timeout in minutes (default: 15)
+- `-t, --timeout MIN` - Agent timeout in minutes (default: 20)
 - `-s, --status` - Show project status and exit
 - `-r, --reset` - Reset circuit breaker
 
@@ -109,7 +147,7 @@ Live status dashboard (auto-started with `--monitor`).
 │     Human-readable requirements document                        │
 │                                                                 │
 │  2. Convert to JSON (prd.json)                                  │
-│     Claude breaks down PRD into actionable tasks                │
+│     Cursor Agent (or Claude) breaks down PRD into tasks        │
 │                                                                 │
 │  3. Ralph Loop                                                  │
 │     ┌─────────────────────────────────────────────────────┐     │
@@ -117,7 +155,7 @@ Live status dashboard (auto-started with `--monitor`).
 │     │  ↓                                                  │     │
 │     │  Generate prompt with story + context               │     │
 │     │  ↓                                                  │     │
-│     │  Run Claude Code                                    │     │
+│     │  Run Cursor Agent (or Claude Code)                  │     │
 │     │  ↓                                                  │     │
 │     │  Analyze response (check status block)              │     │
 │     │  ↓                                                  │     │
@@ -184,9 +222,9 @@ When running with `--monitor`:
 
 ## Safety Features
 
-- **Rate Limiting**: Max 100 calls/hour (configurable)
+- **Rate Limiting**: Max 100 calls/hour (configurable, mainly for Claude Code)
 - **Circuit Breaker**: Auto-stops after repeated failures
-- **Exit Detection**: Stops when Claude signals completion
+- **Exit Detection**: Stops when Agent signals completion
 - **Branch Isolation**: Each feature runs on its own git branch
 
 ## Learnings System
@@ -264,5 +302,24 @@ ralph/
 ### Rate limit hit
 Ralph automatically waits for the next hour. You can detach with `Ctrl+B, D` and come back later.
 
-### Claude not responding
+### Agent not responding
 Check the logs in `ralph/projects/<project>/logs/` for details.
+
+### Switching between Cursor Agent and Claude Code
+
+To use Claude Code instead of Cursor Agent:
+
+1. Edit `start.sh` and change:
+   ```bash
+   CLAUDE_CMD="agent --print --force"
+   ```
+   to:
+   ```bash
+   CLAUDE_CMD="claude --dangerously-skip-permissions"
+   ```
+
+2. Make sure Claude Code is installed:
+   ```bash
+   npm install -g @anthropic-ai/claude-code
+   claude login
+   ```
