@@ -20,9 +20,9 @@ cp -r path/to/ralph your-project/
 Or if you are starting from this repo, clone and copy:
 
 ```bash
-git clone https://github.com/ky-zo/ralph.git
-cp -r ralph your-project/
-   ```
+git clone https://github.com/danielsinewe/ralph-cursor.git
+cp -r ralph-cursor your-project/ralph
+```
 
 
 ```bash
@@ -45,14 +45,19 @@ code ralph/projects/my-feature/prd.md
 # Install dependencies
 brew install jq tmux coreutils
 
-# Cursor Agent (default, recommended)
-# Cursor Agent comes with Cursor IDE - no separate install needed
+# Cursor Agent (default, recommended) - NO INSTALL NEEDED!
+# Cursor Agent comes built-in with Cursor IDE
 # Just ensure 'agent' is in your PATH (~/.local/bin/agent)
 # If not, add to ~/.zshrc or ~/.bashrc:
 # export PATH="$HOME/.local/bin:$PATH"
+# 
+# Verify installation:
+# agent --help
 
-# OR install Claude Code (alternative)
-npm install -g @anthropic-ai/claude-code
+# OR install Claude Code (optional alternative)
+# Only needed if you want to use Claude Code instead of Cursor Agent
+# npm install -g @anthropic-ai/claude-code
+# claude login
 ```
 
 ## Configuration
@@ -67,16 +72,19 @@ CLAUDE_CMD="agent --print --force"
 CLAUDE_CMD="claude --dangerously-skip-permissions"
 ```
 
-### Why Cursor Agent?
+### Why Cursor Agent? (Default)
 
-| Feature | Claude Code | Cursor Agent |
-|---------|-------------|--------------|
-| API Limits | Yes (100 calls/hour) | No limits |
-| Cost | Paid API usage | Free with Cursor IDE |
-| File Editing | ✅ | ✅ |
-| Shell Commands | ✅ | ✅ (with --force) |
-| Setup | npm install | Built-in with Cursor |
-| Rate Limits | Strict | None |
+| Feature | Claude Code | Cursor Agent ⭐ |
+|---------|-------------|----------------|
+| **Installation** | `npm install -g @anthropic-ai/claude-code` | Built-in with Cursor IDE |
+| **API Limits** | Yes (100 calls/hour) | **No limits** |
+| **Cost** | Paid API usage | **Free** with Cursor IDE |
+| **File Editing** | ✅ | ✅ |
+| **Shell Commands** | ✅ | ✅ (with --force) |
+| **Setup Time** | 5-10 minutes | **0 minutes** (already installed) |
+| **Rate Limits** | Strict | **None** |
+
+**Cursor Agent is the default** - no installation required if you have Cursor IDE!
 
 ### Chrome DevTools MCP (Optional - Claude Code only)
 
@@ -307,9 +315,17 @@ Check the logs in `ralph/projects/<project>/logs/` for details.
 
 ### Switching between Cursor Agent and Claude Code
 
-To use Claude Code instead of Cursor Agent:
+**Cursor Agent is the default** - works out of the box with Cursor IDE!
 
-1. Edit `start.sh` and change:
+To use Claude Code instead (optional):
+
+1. Install Claude Code:
+   ```bash
+   npm install -g @anthropic-ai/claude-code
+   claude login
+   ```
+
+2. Edit `start.sh` and change:
    ```bash
    CLAUDE_CMD="agent --print --force"
    ```
@@ -318,8 +334,4 @@ To use Claude Code instead of Cursor Agent:
    CLAUDE_CMD="claude --dangerously-skip-permissions"
    ```
 
-2. Make sure Claude Code is installed:
-   ```bash
-   npm install -g @anthropic-ai/claude-code
-   claude login
-   ```
+**Note:** Cursor Agent is recommended - no installation or API limits!
