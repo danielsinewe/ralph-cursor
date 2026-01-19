@@ -11,7 +11,12 @@ source "$SCRIPT_DIR/lib/circuit_breaker.sh"
 source "$SCRIPT_DIR/lib/response_analyzer.sh"
 
 # Configuration
-CLAUDE_CMD="claude --dangerously-skip-permissions"
+# Use Cursor Agent instead of Claude CLI
+# --print: enables non-interactive mode with file editing capabilities
+# --force: allows shell commands (npm, git, etc.) required by Ralph
+# Ensure agent is in PATH
+export PATH="$HOME/.local/bin:$PATH"
+CLAUDE_CMD="agent --print --force"
 
 # Use gtimeout on macOS (from brew install coreutils), timeout on Linux
 if command -v gtimeout &>/dev/null; then
@@ -238,7 +243,7 @@ execute_claude() {
     local max_timeout_retries=2  # Retry up to 2 more times on timeout (3 total attempts)
     local timeout_attempt=0
     
-    log "LOOP" "Executing Claude Code (Loop #$loop_count)"
+    log "LOOP" "Executing Agent (Loop #$loop_count)"
     
     # Generate prompt (not saved to disk)
     local prompt_content
@@ -259,16 +264,16 @@ execute_claude() {
         if [[ $timeout_attempt -gt 1 ]]; then
             log "INFO" "⏳ Timeout retry $((timeout_attempt - 1))/$max_timeout_retries (timeout: ${CLAUDE_TIMEOUT_MINUTES}m)..."
         else
-            log "INFO" "⏳ Starting Claude (timeout: ${CLAUDE_TIMEOUT_MINUTES}m)..."
+            log "INFO" "⏳ Starting Agent (timeout: ${CLAUDE_TIMEOUT_MINUTES}m)..."
         fi
         
         # Execute Claude
         if echo "$prompt_content" | $TIMEOUT_CMD ${timeout_seconds}s $CLAUDE_CMD > "$output_file" 2>&1; then
-            log "SUCCESS" "✅ Claude execution completed"
+            log "SUCCESS" "✅ Agent execution completed"
             
             # Check for project completion token
             if grep -q "$COMPLETE_TOKEN" "$output_file"; then
-                log "SUCCESS" "🎉 Claude signaled PROJECT COMPLETE!"
+                log "SUCCESS" "🎉 Agent signaled PROJECT COMPLETE!"
                 return 2  # Special code for project complete
             fi
             
@@ -292,7 +297,7 @@ execute_claude() {
             # Claude updates prd.json directly - no need to mark stories here
             # Just log completion status for visibility
             if [[ "$exit_signal" == "true" ]]; then
-                log "SUCCESS" "📝 Claude signaled loop completion"
+                log "SUCCESS" "📝 Agent signaled loop completion"
             fi
             
             return 0
@@ -302,28 +307,28 @@ execute_claude() {
             # Check for "out of extra usage" first (before timeout retry logic)
             # This catches cases where Claude showed the limit message before we timed out
             if check_usage_limit "$output_file"; then
-                log "WARN" "🚫 Claude out of extra usage - detected limit message"
+                log "WARN" "🚫 Agent out of extra usage - detected limit message"
                 return 5  # Special code for usage limit with reset time
             fi
             
             # Check for timeout (exit code 124)
             if [[ $exit_code -eq 124 ]]; then
                 if [[ $timeout_attempt -le $max_timeout_retries ]]; then
-                    log "WARN" "⏰ Claude timed out after ${CLAUDE_TIMEOUT_MINUTES} minutes (attempt $timeout_attempt/$((max_timeout_retries + 1)))"
+                    log "WARN" "⏰ Agent timed out after ${CLAUDE_TIMEOUT_MINUTES} minutes (attempt $timeout_attempt/$((max_timeout_retries + 1)))"
                     log "INFO" "Retrying in 10 seconds..."
                     sleep 10
                     continue  # Retry
                 else
-                    log "ERROR" "❌ Claude timed out after ${CLAUDE_TIMEOUT_MINUTES} minutes (all $((max_timeout_retries + 1)) attempts exhausted)"
+                    log "ERROR" "❌ Agent timed out after ${CLAUDE_TIMEOUT_MINUTES} minutes (all $((max_timeout_retries + 1)) attempts exhausted)"
                     return 4  # Special code for timeout after retries
                 fi
             else
-                log "ERROR" "❌ Claude execution failed with code $exit_code"
+                log "ERROR" "❌ Agent execution failed with code $exit_code"
             fi
             
             # Check for 5-hour API limit
             if grep -qi "5.*hour.*limit\|limit.*reached\|usage.*limit" "$output_file" 2>/dev/null; then
-                log "ERROR" "🚫 Claude API 5-hour usage limit reached"
+                log "ERROR" "🚫 Agent API 5-hour usage limit reached"
                 return 3  # Special code for API limit
             fi
             
