@@ -1,0 +1,18 @@
+## Summary
+
+**prd.json**: Created 26 user stories organized by priority:
+- **Priority 1-2 (Technical)**: Database schema, types/schemas, and all CRUD API endpoints for agencies, case studies, testimonials, team members
+- **Priority 2-3 (Functional)**: Slug generation, authorization checks, image upload, agency registration
+- **Priority 3-4 (UI)**: Public agency directory, profile pages, all display components
+- **Priority 4-5 (UI)**: Dashboard, edit forms, management pages for authenticated users
+
+**requirements.md**: Technical specifications covering:
+- System architecture (PostgreSQL, tRPC, Next.js)
+- 7 database table schemas with all columns and constraints
+- API specifications (5 public endpoints, 15+ protected endpoints)
+- Filter parameters for agency search
+- UI requirements for public and authenticated pages
+- Performance requirements and caching strategy
+- Security considerations (auth, authorization, validation, privacy)
+- Image requirements and background job definitions
+- Enum definitions for services, industries, and statuses
