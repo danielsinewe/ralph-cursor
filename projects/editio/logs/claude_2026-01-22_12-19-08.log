@@ -1,0 +1,39 @@
+Story 1.9 is complete. Here's a summary of what was accomplished:
+
+## Story 1.9: Implement figure support with automatic text wrapping
+
+### Changes Made:
+1. **Parser (editio-parser)**: 
+   - Added `Container::Image` for tracking images during parsing
+   - Created `preprocess_image_attributes()` to handle inline `{...}` attributes
+   - Single-image paragraphs now convert to block-level `Node::Image`
+
+2. **PDF Renderer (editio-pdf)**:
+   - Updated `render_image()` to display "Figure N: Caption" format
+   - Figure numbers come from cross-reference system via `CrossRefData`
+   - Bold font for figure captions with labels
+
+3. **Integration**:
+   - Figure labels with `fig:` prefix integrate with `CrossRefResolver`
+   - Text wrapping around floating figures works via layout engine
+
+### Figure Syntax Supported:
+```markdown
+![alt](image.png){#fig:label caption="Description" float=right width=50%}
+```
+
+### Tests:
+- 15 new tests added
+- 158 total workspace tests pass
+
+**Note**: Could not push changes - no remote configured for this repository. Commit is stored locally on `ralph/editio` branch.
+
+---RALPH_STATUS---
+STATUS: COMPLETE
+TASKS_COMPLETED_THIS_LOOP: 1
+FILES_MODIFIED: 4
+TESTS_STATUS: PASSING
+WORK_TYPE: IMPLEMENTATION
+EXIT_SIGNAL: false
+RECOMMENDATION: Continue with Story 1.10 (Table support with markdown tables)
+---END_RALPH_STATUS---

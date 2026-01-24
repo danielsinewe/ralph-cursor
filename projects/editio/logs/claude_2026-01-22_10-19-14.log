@@ -1,0 +1,44 @@
+## Summary
+
+Story 1.6 "Build academic extensions for theorems, algorithms, and code listings" is complete.
+
+### What was implemented:
+
+1. **Block directive parsing** in editio-parser:
+   - Syntax: `::: theorem {#thm:main caption="Title"} ... :::`
+   - Supported types: theorem, lemma, proposition, corollary, definition, example, remark, proof, algorithm
+   - Preprocessor scans input before pulldown-cmark parsing
+   - Nested markdown content is supported
+
+2. **Auto-numbering** in PDF renderer:
+   - Theorems render as "Theorem 1.", "Definition 2.", etc.
+   - Algorithms render as "Algorithm 1: Caption"
+   - Code listings render as "Listing 1: Caption"
+   - Numbering comes from the cross-reference system
+
+3. **12 new tests** covering:
+   - Parsing theorem/definition/algorithm/proof blocks
+   - Parsing multiple theorem kinds
+   - Nested content in block directives
+   - Rendering with cross-reference data
+
+### Test Results:
+- 99 total workspace tests pass
+- 27 parser tests, 22 PDF tests, 18 core tests, 17 layout tests
+
+### Files Modified:
+- `crates/editio-parser/src/lib.rs` (+327 lines)
+- `crates/editio-pdf/src/lib.rs` (+267 lines)
+- `AGENTS.md` (block directive patterns)
+
+Note: No remote is configured for this repository, so changes could not be pushed.
+
+---RALPH_STATUS---
+STATUS: COMPLETE
+TASKS_COMPLETED_THIS_LOOP: 1
+FILES_MODIFIED: 4
+TESTS_STATUS: PASSING
+WORK_TYPE: IMPLEMENTATION
+EXIT_SIGNAL: false
+RECOMMENDATION: Continue with next story (1.7 - Math typesetting with LaTeX syntax)
+---END_RALPH_STATUS---

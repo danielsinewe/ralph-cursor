@@ -1,0 +1,1729 @@
+# Progress Log: editio
+
+Created: 2026-01-22 09:04:14
+
+## Notes
+- Edit prd.md with your requirements
+- Run: ./ralph/convert.sh editio
+- Then: ./ralph/start.sh editio
+
+---
+
+## Loop 1 - Story 1.1: Initialize Rust workspace
+
+**Date:** 2026-01-22
+**Status:** COMPLETE
+
+### What was done
+- Created workspace Cargo.toml with 14 crates
+- Set up all crate structures: editio, editio-core, editio-ast, editio-parser, editio-layout, editio-render, editio-pdf, editio-html, editio-latex, editio-word, editio-bib, editio-math, editio-template, editio-plugin
+- Implemented basic CLI with clap (compile, check, init, template, plugin commands)
+- Added 26 unit tests across all crates
+- All tests pass, workspace compiles successfully
+
+### Key patterns discovered
+- printpdf uses f32 for Mm type, need to cast from f64 layout values
+- Use workspace dependencies for consistent version management
+- Re-export sub-crate types through editio-core for clean imports
+
+### Files created
+- Cargo.toml (workspace root)
+- .gitignore
+- crates/editio/Cargo.toml, src/main.rs
+- crates/editio-core/Cargo.toml, src/lib.rs
+- crates/editio-ast/Cargo.toml, src/lib.rs
+- crates/editio-parser/Cargo.toml, src/lib.rs
+- crates/editio-layout/Cargo.toml, src/lib.rs
+- crates/editio-render/Cargo.toml, src/lib.rs
+- crates/editio-pdf/Cargo.toml, src/lib.rs
+- crates/editio-html/Cargo.toml, src/lib.rs
+- crates/editio-latex/Cargo.toml, src/lib.rs
+- crates/editio-word/Cargo.toml, src/lib.rs
+- crates/editio-bib/Cargo.toml, src/lib.rs
+- crates/editio-math/Cargo.toml, src/lib.rs
+- crates/editio-template/Cargo.toml, src/lib.rs
+- crates/editio-plugin/Cargo.toml, src/lib.rs
+
+---
+
+## Loop 2 - Story 1.2: Implement CommonMark-compatible markdown parser
+
+**Date:** 2026-01-22
+**Status:** COMPLETE
+
+### What was done
+- Completely rewrote editio-parser with stack-based parsing approach
+- Implemented all CommonMark features: headings, emphasis, strong, lists (ordered/unordered), blockquotes, tables, code blocks, links, inline code, thematic breaks
+- Added YAML-style attribute parsing: {#id .class float=left width=50%}
+- Implemented dimension parsing for multiple units: %, px, pt, mm, cm, in, em
+- Added inline math processing for $...$ delimiter syntax
+- Implemented citation and cross-reference parsing utilities
+- Added 20 comprehensive unit tests for the parser
+
+### Key patterns discovered
+- pulldown-cmark 0.10.x: Tag::BlockQuote is a unit variant (no parameters)
+- Use peekable iterators with explicit while loops instead of take_while for parsing - take_while consumes the delimiter character
+- Stack-based Container enum approach works well for nested element parsing
+- Need to use .as_str() when matching String against &str patterns
+
+### Files modified
+- crates/editio-parser/src/lib.rs (970 lines added, 48 removed)
+
+### Test results
+- 43 tests pass (20 in editio-parser, 23 in other crates)
+- All workspace crates compile successfully
+
+---
+
+## Loop 3 - Story 1.3: Build two-pass layout engine with CSS-style float algorithm
+
+**Date:** 2026-01-22
+**Status:** COMPLETE
+
+### What was done
+- Implemented complete two-pass layout algorithm in editio-layout
+- Pass 1: Collects all floating elements (images with float=left/right), calculates dimensions, creates wrap zones
+- Pass 2: Positions all elements sequentially, flowing text around wrap zones
+- Implemented CSS-style float algorithm with WrapZone struct tracking left/right floats
+- Lists can wrap around figures (key differentiator) - individual list items flow around wrap zones
+- Implemented page break calculation based on content height vs available space
+- Added text line tracking for proper text wrapping with variable widths
+- Added dimension conversion (pt, mm, cm, in, %, em, px to points)
+- Added 17 comprehensive unit tests including test_list_wraps_around_float
+
+### Key patterns discovered
+- Layout uses LayoutEngine struct to track state during calculation
+- WrapZone tracks: page, top, bottom, left, right, wrap_side (Left/Right/Both), source_element
+- Text wrapping calculates available width at each Y position by checking active wrap zones
+- Lists need special handling - each item calculates its own lines with wrap zone awareness
+- Page breaks tracked with PageBreak struct (after_element, y_position, page)
+- PositionedElement includes text_lines Vec<TextLine> for detailed line positioning
+
+### Key types added
+- LayoutEngine: Internal state machine for layout calculation
+- WrapZone: Defines area where text must flow around
+- WrapSide: Left/Right/Both enum for wrap direction
+- TextLine: Line position within an element (x, y, width, height, char_start, char_end)
+- ElementKind: Paragraph/Heading/CodeBlock/ListItem/Table/Image/Math/ThematicBreak/Other
+- PositionedElement: Final positioned element with page, x, y, width, height, kind, text_lines
+
+### Files modified
+- crates/editio-layout/src/lib.rs (850+ lines added, complete rewrite of layout engine)
+
+### Test results
+- 60 tests pass (17 new in editio-layout, 43 existing)
+- All workspace crates compile successfully
+
+---
+
+## Loop 4 - Story 1.4: Implement PDF generation with custom layout engine
+
+**Date:** 2026-01-22
+**Status:** COMPLETE
+
+### What was done
+- Implemented full PDF rendering using printpdf library
+- Added rendering for all element types: paragraphs, headings, code blocks, lists, tables, images (placeholder), math blocks, block quotes, thematic breaks, theorems
+- Implemented text wrapping around floats using TextLine data from layout engine
+- Lists properly wrap around floating figures (key differentiator)
+- Added basic page formatting with configurable margins and page sizes
+- Implemented headers (with document title) and footers (with page numbers)
+- Added multi-page support with proper page creation
+- Added 17 comprehensive unit tests covering all element types and float wrapping
+
+### Key patterns discovered
+- PDF coordinates use bottom-left origin; need flip_y() to convert from top-left layout coordinates
+- printpdf uses f32 for Mm type; use `as f32` cast for all dimension values
+- Built-in fonts (Helvetica, HelveticaBold, Courier) work without external font files
+- Use PdfLayerReference for all drawing operations (text, lines, rectangles)
+- Line drawing uses Point vectors with is_closed flag for shapes vs lines
+- Multi-page requires add_page() and tracking (PdfPageIndex, PdfLayerIndex) pairs
+
+### Key types/functions added
+- PdfRenderer: Main renderer struct with configurable headers/footers
+- render_text(): Text rendering with font and size
+- render_line(): Line/rule drawing
+- render_rect(): Rectangle drawing for backgrounds and borders
+- render_paragraph(): Text with optional TextLine-based wrapping
+- render_heading(): Headings with level-based font sizes
+- render_code_block(): Code with background and monospace font
+- render_list(): Ordered/unordered lists with bullets/numbers
+- render_table(): Tables with headers, alignment, and borders
+- render_image(): Image placeholders with caption support
+- extract_text(): Flatten inline elements to plain text
+
+### Files modified
+- crates/editio-pdf/src/lib.rs (1020 lines added, complete implementation)
+
+### Test results
+- 74 tests pass (17 new in editio-pdf, 57 existing)
+- All workspace crates compile successfully
+
+---
+
+## Loop 5 - Story 1.5: Implement unified cross-reference system
+
+**Date:** 2026-01-22
+**Status:** COMPLETE
+
+### What was done
+- Created CrossRefResolver struct for tracking labels across all element types
+- Implemented automatic sequential numbering for figures, tables, equations, theorems, algorithms, sections, and listings
+- Added cross-reference syntax extraction from text using bracket patterns
+- Supported two reference formats: [@label] and [See @label] (with prefix text)
+- Implemented label prefixes: fig:, tbl:, eq:, thm:, alg:, sec:, lst:
+- Integrated cross-reference resolution into compilation pipeline
+- Added CrossRefData to PDF renderer for resolving references at render time
+- Added 18 new unit tests for cross-reference functionality
+
+### Key patterns discovered
+- Cross-reference extraction must happen after parsing (pulldown-cmark doesn't know about [@ref] syntax)
+- Use process_inline_crossrefs() to walk document tree and extract refs from Text nodes
+- Extract cross-refs with bracket matching, not regex (more reliable for nested brackets)
+- Pass CrossRefData (HashMap<label, display_text>) to renderers for resolution
+- Labels require colons (fig:example) to distinguish from citations
+
+### Key types added
+- CrossRefResolver: Tracks labels, counters, and resolves references
+- CrossRefError: Error types for undefined/duplicate labels
+- RefType: Enum for element types (Figure, Table, Equation, Theorem variants, etc.)
+- LabelInfo: Stores ref_type, number, section_number, caption
+- CrossRefData: Simple HashMap wrapper for renderer consumption
+- extract_cross_refs(): Extracts CrossRef inlines from text strings
+
+### Files modified/created
+- crates/editio-core/src/crossref.rs (new, ~500 lines)
+- crates/editio-core/src/lib.rs (+220 lines for integration)
+- crates/editio-pdf/src/lib.rs (+70 lines for CrossRefData support)
+
+### Test results
+- 87 tests pass (18 new in editio-core, 69 existing)
+- All workspace crates compile successfully
+
+---
+
+## Loop 6 - Story 1.6: Build academic extensions for theorems, algorithms, and code listings
+
+**Date:** 2026-01-22
+**Status:** COMPLETE
+
+### What was done
+- Implemented block directive parsing for academic environments in editio-parser
+- Added support for ::: theorem, ::: definition, ::: algorithm, ::: proof, etc.
+- Block directives support attributes: {#label caption="Title"}
+- Updated PDF renderer to show auto-numbering for theorems, algorithms, and listings
+- Code listings with labels/captions now render with "Listing N: Caption" format
+- Algorithm blocks render with "Algorithm N: Caption" format
+- Theorem environments render with "Theorem N." format (leveraging cross-reference system)
+- Added 12 new tests covering parsing and rendering of academic extensions
+
+### Key patterns discovered
+- Block directive preprocessing: scan input for ::: blocks before pulldown-cmark parsing
+- Use thread_local! storage to pass extracted directives from preprocessing to parsing
+- Placeholder HTML comments <!-- BLOCK_DIRECTIVE_N --> mark directive locations in text
+- Parse directive content recursively to support nested markdown structures
+- Academic element numbering uses CrossRefData from cross-reference system
+
+### Block directive syntax
+```
+::: theorem {#thm:main caption="Main Theorem"}
+Content with **markdown** and $math$.
+:::
+```
+
+### Supported block types
+- theorem, lemma, proposition, corollary
+- definition, example, remark, proof
+- algorithm
+
+### Key functions added
+- preprocess_block_directives(): Extract and mark block directive locations
+- parse_directive_start(): Parse ::: opening line to extract kind, label, caption
+- parse_block_directive_placeholder(): Convert placeholder back to AST node
+- create_block_directive_node(): Build Theorem or Algorithm node from directive
+- render_theorem(): Renders theorems with auto-numbering from cross-refs
+- render_algorithm(): Renders algorithms with caption and numbering
+- render_code_listing(): Renders code blocks with caption support
+
+### Files modified
+- crates/editio-parser/src/lib.rs (+327 lines for block directive parsing)
+- crates/editio-pdf/src/lib.rs (+267 lines for enhanced rendering)
+
+### Test results
+- 99 tests pass (27 in editio-parser, 22 in editio-pdf, 50 in other crates)
+- All workspace crates compile successfully
+
+---
+
+## Loop 7 - Story 1.7: Implement math typesetting with LaTeX syntax
+
+**Date:** 2026-01-22
+**Status:** COMPLETE
+
+### What was done
+- Added display math block parsing (`$$...$$`) in editio-parser with label support (`{#eq:label}`)
+- Implemented MathRenderer in editio-math with pdflatex subprocess validation
+- Extended PDF renderer to display equation numbers for labeled equations
+- Integrated equation labels with cross-reference system (eq: prefix)
+- Added graceful fallback when pdflatex is not available
+- Implemented pdflatex availability detection
+- Added 16 new unit and integration tests
+
+### Key patterns discovered
+- Display math preprocessing: similar pattern to block directives, scan for `$$...$$` before pulldown-cmark
+- Use separate thread_local! storage for display math blocks (DISPLAY_MATH_BLOCKS)
+- Placeholder HTML comments `<!-- DISPLAY_MATH_N -->` mark math block locations
+- Math labels support: `$$ content $$ {#eq:label}` or multi-line with `{#eq:label}` after closing `$$`
+- PDF renders equations centered with number on right margin when labeled (e.g., "(1)")
+- MathExpression.to_latex() wraps in `\[...\]` for display, `$...$` for inline
+
+### Display math syntax
+```markdown
+$$ E = mc^2 $$ {#eq:einstein}
+
+$$
+\int_0^1 x^2 \, dx = \frac{1}{3}
+$$ {#eq:integral}
+
+Reference: See [@eq:einstein] for Einstein's equation.
+```
+
+### Key types/functions added
+- DisplayMathBlock: Stores content, label, placeholder_id
+- DISPLAY_MATH_BLOCKS: thread_local storage for math blocks
+- parse_display_math_placeholder(): Convert placeholder to DisplayMathBlock
+- parse_display_math_attrs(): Extract label from `{#eq:label}` syntax
+- MathRenderer: Renderer with pdflatex integration and fallback
+- MathConfig: Configuration for math rendering options
+- RenderedMath: Result of rendering with dimensions
+- is_pdflatex_available(): Check system for pdflatex
+- create_latex_document(): Generate minimal LaTeX doc for validation
+
+### Files modified
+- crates/editio-parser/src/lib.rs (+140 lines for display math parsing)
+- crates/editio-math/src/lib.rs (complete rewrite, +300 lines)
+- crates/editio-pdf/src/lib.rs (+25 lines for equation numbering)
+- crates/editio-core/src/lib.rs (+60 lines for integration tests)
+
+### Test results
+- 115 tests pass (32 in editio-parser, 10 in editio-math, 22 in editio-pdf, 51 in other crates)
+- All workspace crates compile successfully
+
+
+---
+
+## Loop 8 - Story 1.8: Build bibliography system with BibTeX support
+
+**Date:** 2026-01-22
+**Status:** COMPLETE
+
+### What was done
+- Integrated existing editio-bib crate (BibTeX parser) into compilation pipeline
+- Added citation extraction from markdown text ([@author2024] syntax)
+- Implemented citation processing with CitationManager in compilation pipeline
+- Added CitationData struct to PDF renderer for citation formatting
+- Updated PDF renderer to format citations based on style (APA, MLA, Chicago, IEEE)
+- Added bibliography section rendering at end of PDF documents
+- Fixed malformed curly quote characters in editio-bib formatting functions
+- Added compile_string_with_bib() function for compiling with bibliography
+- Added 6 new integration tests for bibliography functionality
+- Integrated citations with cross-reference system (distinguished by colon in label)
+
+### Key patterns discovered
+- Citations vs cross-references: labels with colons (fig:example) are cross-references, without (smith2024) are citations
+- Citation extraction happens in same pass as cross-reference extraction
+- CitationManager tracks citation order for numeric formatting
+- PDF bibliography rendered as new section after document content
+- Support both author-year formats (APA, MLA, Chicago) and numeric format (IEEE)
+
+### Citation syntax supported
+- `[@author2024]` - Simple citation
+- `[@author2024, p. 42]` - Citation with suffix (page number)
+- `[see @author2024]` - Citation with prefix
+- `[@author1; @author2]` - Multiple citations (via editio-bib)
+
+### Key types/functions added
+- CitationData: Holds citation numbers, formatted citations, and bibliography for PDF
+- extract_refs_and_citations(): Extract both cross-refs and citations from text
+- parse_citation_content(): Parse citation from bracket content
+- compile_string_with_bib(): Compile with optional bibliography content
+- process_citations(): Register citations with CitationManager
+- CitationData.format_citation(): Format citation based on style
+
+### Files modified
+- crates/editio-pdf/Cargo.toml (+1 line for editio-bib dependency)
+- crates/editio-pdf/src/lib.rs (+229 lines for CitationData and bibliography rendering)
+- crates/editio-core/src/lib.rs (+482 lines for citation integration and tests)
+- crates/editio-bib/src/lib.rs (fixed curly quote issues in formatting functions)
+- crates/editio/src/main.rs (+2 lines for new CompileOptions fields)
+
+### Test results
+- 143 tests pass (28 in editio-core, 24 in editio-bib, 32 in editio-parser, 59 in other crates)
+- All workspace crates compile successfully
+
+
+---
+
+## Loop 9 - Story 1.9: Implement figure support with automatic text wrapping
+
+**Date:** 2026-01-22
+**Status:** COMPLETE
+
+### What was done
+- Fixed parser to properly create Node::Image from markdown `![alt](src)` syntax
+- Added Container::Image variant for tracking images during parsing
+- Single-image paragraphs now convert to block-level Node::Image
+- Implemented inline YAML-style attribute preprocessing: `![alt](src){#fig:label caption="..." float=right width=50%}`
+- Added preprocess_image_attributes() function to convert inline attrs to HTML comments
+- Updated PDF renderer to display "Figure N: Caption" format with cross-reference data
+- Figure numbering integrated with CrossRefResolver via fig: prefix labels
+- Added 15 new tests covering figure parsing, attributes, and compilation
+
+### Key patterns discovered
+- pulldown-cmark treats images as inline elements inside paragraphs
+- Check if paragraph contains only a single Inline::Image to convert to block-level Node::Image
+- Inline attributes `{...}` after images need preprocessing - convert to HTML comments for parser
+- Figure caption format: check crossref_data for label to get "Figure N", then append ": Caption"
+- Container stack needs Image variant to collect alt text from Text events
+
+### Figure syntax supported
+- `![alt text](image.png)` - Simple image
+- `![alt](image.png){#fig:label}` - Image with cross-reference label
+- `![alt](image.png){#fig:label caption="Full caption"}` - With caption
+- `![alt](image.png){float=right width=50%}` - With float and dimensions
+- `![alt](image.png)` followed by `<!-- {#fig:label ...} -->` - HTML comment attributes
+
+### Key types/functions added
+- Container::Image: Parser container for building images
+- preprocess_image_attributes(): Convert inline `{...}` attrs to HTML comments
+- Updated render_image(): Now accepts label parameter, displays "Figure N: Caption"
+- render_image now uses bold_font for figure captions with labels
+
+### Files modified
+- crates/editio-parser/src/lib.rs (+150 lines for image parsing and preprocessing)
+- crates/editio-pdf/src/lib.rs (+30 lines for enhanced figure rendering)
+- crates/editio-core/src/lib.rs (+70 lines for figure integration tests)
+
+### Test results
+- 158 tests pass (33 in editio-core, 42 in editio-parser, 24 in editio-bib, 59 in other crates)
+- All workspace crates compile successfully
+
+
+---
+
+## Loop 10 - Story 1.10: Build table support with markdown tables
+
+**Date:** 2026-01-22
+**Status:** COMPLETE
+
+### What was done
+- Updated render_table() to accept label and caption parameters
+- Added "Table N: Caption" rendering below tables (similar to figures)
+- Tables with tbl: labels now resolve via cross-reference system
+- Verified column alignment (left, center, right) works correctly
+- Added 3 parser tests for table attributes and alignment
+- Added 4 integration tests for table cross-references
+
+### Key patterns discovered
+- Tables already parsed by pulldown-cmark; attributes applied via HTML comment syntax
+- Table captions rendered below table body (not inside border box)
+- Table numbering uses same CrossRefResolver pattern as figures with tbl: prefix
+- Alignment enum (Left, Center, Right) from pulldown-cmark alignment hints
+
+### Table syntax supported
+- Standard markdown tables with `|` separators
+- Column alignment via `:---`, `:---:`, `---:` in separator row
+- Attributes via HTML comment: `<!-- {#tbl:label caption="Caption"} -->`
+- Cross-references: `[@tbl:example]` resolves to "Table 1"
+
+### Key functions modified
+- render_table(): Added label/caption parameters, caption rendering below table
+- PDF rendering call site: Extract label/caption from Node::Table
+
+### Files modified
+- crates/editio-pdf/src/lib.rs (+41 lines for caption support)
+- crates/editio-parser/src/lib.rs (+50 lines for table attribute tests)
+- crates/editio-core/src/lib.rs (+82 lines for integration tests)
+
+### Test results
+- 165 tests pass (37 in editio-core, 45 in editio-parser, 24 in editio-bib, 59 in other crates)
+- All workspace crates compile successfully
+
+
+---
+
+## Loop 11 - Story 1.11: Implement document formatting with YAML front matter
+
+**Date:** 2026-01-22
+**Status:** COMPLETE
+
+### What was done
+- Extended DocumentMetadata in editio-ast with additional formatting fields:
+  - line_height: Line spacing multiplier (default 1.5)
+  - number_headings: Enable automatic section numbering
+  - paragraph_spacing: Space after paragraphs in points
+  - first_line_indent: First line indentation in points
+  - text_align: Default text alignment for paragraphs
+  - abstract_text: Abstract for academic documents
+  - keywords: Keywords list for academic documents
+- Implemented HeadingNumberer class for automatic section numbering (1, 1.1, 1.2.1, etc.)
+- Added process_heading_numbers() function in editio-core
+- Created HeadingNumbers type in editio-pdf for passing numbers to renderer
+- Updated PDF renderer to prepend numbers to headings when enabled
+- Layout engine now reads line_height from document metadata
+- Added 13 new integration tests for YAML front matter and heading numbering
+
+### Key patterns discovered
+- Serde handles YAML deserialization automatically for DocumentMetadata fields
+- Heading numbering uses counter array with level-based reset (counters reset when going to higher-level heading)
+- HeadingNumbers passed from core to PDF renderer via element index -> number string map
+- Line height from front matter flows: parser -> metadata -> layout engine -> PDF renderer
+
+### YAML front matter syntax supported
+```yaml
+---
+title: "Document Title"
+author: "Author Name"
+date: "2024-01-15"
+page_size: Letter  # or A4, Legal, or Custom
+margins:
+  top: 72.0
+  bottom: 72.0
+  left: 72.0
+  right: 72.0
+font_size: 12.0
+line_height: 1.5
+number_headings: true
+paragraph_spacing: 12.0
+first_line_indent: 24.0
+abstract_text: "Abstract text here..."
+keywords:
+  - keyword1
+  - keyword2
+---
+```
+
+### Key types/functions added
+- HeadingNumberer: Counter array with next_number(level) and reset()
+- HeadingNumbers: HashMap wrapper for element_idx -> number string
+- process_heading_numbers(): Walks document and generates heading numbers
+- PdfRenderer.set_heading_numbers(): Sets heading number data for rendering
+- DocumentMetadata extended fields: line_height, number_headings, paragraph_spacing, first_line_indent, text_align, abstract_text, keywords
+
+### Files modified
+- crates/editio-ast/src/lib.rs (+70 lines for extended metadata and HeadingNumberer)
+- crates/editio-core/src/lib.rs (+150 lines for heading number processing and tests)
+- crates/editio-layout/src/lib.rs (+5 lines for line_height from metadata)
+- crates/editio-pdf/src/lib.rs (+40 lines for HeadingNumbers type and rendering)
+
+### Test results
+- 178 tests pass (46 in editio-core, 45 in editio-parser, 24 in editio-bib, 22 in editio-pdf, 17 in editio-layout, 24 in other crates)
+- All workspace crates compile successfully
+
+
+---
+
+## Loop 12 - Story 1.12: Design plugin system API architecture
+
+**Date:** 2026-01-22
+**Status:** COMPLETE
+
+### What was done
+- Designed comprehensive plugin API with hook-based architecture
+- Implemented four hook traits: ParserHook, AstHook, LayoutHook, RendererHook
+- Created detailed PluginMetadata struct with capabilities, dependencies, keywords
+- Added context types for each hook phase (ParserContext, AstContext, LayoutContext, RenderContext)
+- Designed PluginManager trait interface for future implementation
+- Added declare_plugin! macro for plugin entry point generation
+- Documented complete plugin processing pipeline in module docs
+- Added 14 new unit tests for plugin API types and traits
+
+### Key patterns discovered
+- Hook-based architecture allows clean separation of concerns
+- Context types pass phase-specific state to hooks (source path, document, crossrefs, etc.)
+- Hook priority (lower = earlier) allows ordering when multiple plugins provide same hook
+- PluginCapabilities enables optimization by skipping plugins that don't provide needed hooks
+- PluginDependency with semver ranges enables proper dependency resolution
+
+### Plugin API architecture
+```
+Input -> [ParserHook.pre_parse] -> Parser -> [ParserHook.post_parse] -> AST
+                                                   |
+                                                   v
+                                         [AstHook.transform]
+                                                   |
+                                                   v
+                                         [AstHook.validate]
+                                                   |
+                                                   v
+                                         [LayoutHook.modify]
+                                                   |
+                                                   v
+                                        [RendererHook.render]
+                                                   |
+                                                   v
+                                                Output
+```
+
+### Key types added
+- Plugin trait: main interface (metadata, init, shutdown, configure, hooks)
+- PluginMetadata: name, version, author, description, capabilities, dependencies
+- PluginCapabilities: parser_hooks, ast_hooks, layout_hooks, renderer_hooks, handled_node_types
+- PluginDependency: name, version (semver), optional flag
+- ParserHook: pre_parse, post_parse, parse_inline, priority
+- AstHook: transform, transform_inline, validate, priority
+- LayoutHook: pre_layout, post_layout, force_page_break, priority
+- RendererHook: handles, render, render_inline, priority
+- LayoutHints: width, height, keep_with_next, page_break_before, etc.
+- ElementPosition: page, x, y, width, height
+- PluginManager trait: discover, load, load_all, unload, plugins, invoke hooks
+- PluginSource: File, Git, Builtin
+- PluginState: Discovered, Loaded, Ready, Failed, Disabled
+
+### Files modified
+- crates/editio-plugin/src/lib.rs (complete rewrite, ~1050 lines)
+- crates/editio-plugin/Cargo.toml (+3 lines for dev-dependencies)
+- AGENTS.md (+12 lines for plugin API documentation)
+
+### Test results
+- 192 tests pass (15 in editio-plugin, 46 in editio-core, 45 in editio-parser, 24 in editio-bib, 22 in editio-pdf, 17 in editio-layout, 23 in other crates)
+- All workspace crates compile successfully
+
+
+---
+
+## Loop 13 - Story 1.13: Build CLI interface with core commands
+
+**Date:** 2026-01-22
+**Status:** COMPLETE
+
+### What was done
+- Created EditioConfig struct for parsing editio.toml configuration files
+- Implemented config file auto-discovery (walks up directory tree to find editio.toml)
+- Added --config flag to specify explicit config file path
+- Added --no-config flag to disable config auto-discovery
+- Config options apply to compile command (CLI flags take precedence over config)
+- Added --bibliography and --citation-format CLI flags
+- Improved error messages throughout with helpful hints
+- Enhanced check command with --verbose flag showing document summary
+- Updated init command to generate comprehensive editio.toml template with all options
+- Added 8 new config tests for TOML parsing and format conversion
+
+### Key patterns discovered
+- Use serde with rename_all = "kebab-case" for idiomatic TOML field names
+- CLI flags should always take precedence over config file settings
+- Config auto-discovery walks up directory tree to find project root
+- Config file parsing uses toml crate with serde Deserialize
+- Default values use Default trait impl for config structs
+
+### editio.toml configuration structure
+```toml
+[document]
+title = "My Document"
+author = "Author Name"
+
+[output]
+default-format = "pdf"
+output-dir = "build"
+
+[formatting]
+page-size = "Letter"
+font-size = 12.0
+line-height = 1.5
+number-headings = true
+template = "default"
+
+[citation]
+format = "apa"
+bibliography = "references.bib"
+
+[input]
+main = "src/main.md"
+includes = ["appendix.md"]
+```
+
+### Key types/functions added
+- EditioConfig: Root config struct with document, output, formatting, citation, input sections
+- DocumentConfig: title, author, date
+- OutputConfig: default-format, output-dir
+- FormattingConfig: page-size, font-size, line-height, number-headings, template, etc.
+- CitationConfig: format, bibliography
+- InputConfig: main, includes
+- EditioConfig::load(): Load config from specific path
+- EditioConfig::discover(): Auto-discover config file by walking up directories
+- parse_citation_format(): Convert string to CitationFormat enum
+- parse_output_format(): Convert string to OutputFormat enum
+
+### Files created
+- crates/editio/src/config.rs (~270 lines)
+
+### Files modified
+- crates/editio/Cargo.toml (+5 lines for serde, toml, tempfile deps)
+- crates/editio/src/main.rs (+200 lines for config integration and improved CLI)
+
+### Test results
+- 200 tests pass (8 new in editio, 46 in editio-core, 45 in editio-parser, 24 in editio-bib, 22 in editio-pdf, 17 in editio-layout, 15 in editio-plugin, others)
+- All workspace crates compile successfully
+
+
+---
+
+## Loop 14 - Story 1.14: Create comprehensive testing suite
+
+**Date:** 2026-01-22
+**Status:** COMPLETE
+
+### What was done
+- Added 23 new tests (223 total workspace tests)
+- Created test corpus in tests/fixtures/ directory:
+  - basic_article.md: Full-featured academic article with figures, tables, math, theorems
+  - math_heavy.md: Math-intensive document with equations and cross-references
+  - minimal.md: Simple document for quick testing
+  - references.bib: BibTeX bibliography for citation tests
+- Added integration tests for end-to-end compilation with all document types
+- Implemented golden file testing for PDF output:
+  - Size-based comparison (accounts for timestamp variations)
+  - Structure verification (PDF headers, objects, EOF markers)
+- Added performance benchmarks with timing assertions:
+  - Minimal document: <500ms target
+  - Basic article: <1 second target
+  - Large document (50 sections): <2 seconds target
+- Added edge case tests:
+  - Empty document handling
+  - Document with only front matter
+  - Deeply nested lists
+  - Many cross-references (20 figures)
+  - Unicode content (CJK, Greek, Cyrillic, emoji)
+
+### Key patterns discovered
+- PDF byte-for-byte comparison doesn't work (printpdf generates random IDs)
+- Use size-based comparison for PDF consistency checks
+- Performance tests should use std::time::Instant for accurate timing
+- Test fixtures as const strings in code work well for stable test input
+- Edge case tests help catch corner cases without comprehensive fuzzing
+
+### Test categories added
+- Integration tests: test_integration_basic_article, test_integration_math_heavy, test_integration_minimal, test_integration_list_wrap_around_float, test_integration_with_bibliography
+- Golden file tests: test_golden_file_consistency, test_golden_file_pdf_structure, test_golden_file_content_presence, test_golden_file_different_inputs_different_outputs
+- Performance benchmarks: test_performance_minimal_document, test_performance_basic_article, test_performance_math_heavy, test_performance_repeated_compilation, test_performance_large_document, test_performance_target_under_one_second
+- Edge cases: test_edge_case_empty_document, test_edge_case_only_front_matter, test_edge_case_deeply_nested_lists, test_edge_case_many_cross_references, test_edge_case_unicode_content
+
+### Files created
+- tests/fixtures/basic_article.md (comprehensive academic article)
+- tests/fixtures/math_heavy.md (math-heavy document)
+- tests/fixtures/minimal.md (simple test document)
+- tests/fixtures/references.bib (BibTeX bibliography)
+
+### Files modified
+- crates/editio-core/src/lib.rs (+500 lines for test corpus, integration tests, golden file tests, performance benchmarks)
+- AGENTS.md (+35 lines for testing documentation)
+
+### Test results
+- 223 tests pass (66 in editio-core, 45 in editio-parser, 24 in editio-bib, 22 in editio-pdf, 17 in editio-layout, 15 in editio-plugin, 8 in editio, others)
+- All workspace crates compile successfully
+- Performance target met: <1 second for typical academic document
+
+
+---
+
+## Loop 15 - Story 2.1: Add LaTeX output format support
+
+**Date:** 2026-01-22
+**Status:** COMPLETE
+
+### What was done
+- Implemented full LaTeX renderer in editio-latex crate (~850 lines)
+- Generates clean, compilable LaTeX files from Editio documents
+- Handles all AST node types: paragraphs, headings, code blocks, lists, tables, figures, math, theorems, algorithms
+- Proper LaTeX escaping for special characters ($, %, &, _, ^, ~, #, {, }, <, >)
+- Auto-detects needed packages and generates minimal preamble
+- Cross-reference support via \label and \ref
+- Citation support via \cite with optional prefix/suffix
+- Integrated LaTeX renderer into compilation pipeline with cross-reference and citation data
+- Fixed text node joining in editio-core (pulldown-cmark splits at brackets)
+- Added inline math extraction during text processing
+- Added 22 unit tests in editio-latex and 12 integration tests in editio-core
+
+### Key patterns discovered
+- pulldown-cmark splits Text nodes at brackets `[]`, so `[@ref]` becomes separate nodes - must join adjacent Text nodes before extraction
+- Inline math `$...$` extraction must happen during text processing along with cross-references
+- LaTeX special chars need careful escaping - use `\textbackslash{}` for backslash, `\^{}` for caret
+- Use Renderer trait from editio-render for consistent interface across output formats
+- Packages auto-included based on document content via has_code_blocks(), has_theorems(), etc.
+
+### LaTeX mapping
+- Headings -> \section, \subsection, \subsubsection, \paragraph, \subparagraph
+- Math -> $...$ (inline), \begin{equation} (labeled), \[...\] (unlabeled display)
+- Figures -> \begin{figure}...\includegraphics...\end{figure}
+- Tables -> \begin{table}...\begin{tabular}...\end{table} with booktabs
+- Theorems -> \begin{theorem} via amsthm package
+- Code -> \begin{lstlisting}[language=...] via listings package
+
+### Files modified
+- crates/editio-latex/src/lib.rs (complete rewrite, ~850 lines)
+- crates/editio-core/src/lib.rs (+200 lines for LaTeX integration, inline math extraction, tests)
+- AGENTS.md (+18 lines for LaTeX renderer documentation)
+
+### Test results
+- 255 tests pass (22 in editio-latex, 77 in editio-core, 45 in editio-parser, 24 in editio-bib, 22 in editio-pdf, 17 in editio-layout, 15 in editio-plugin, 8 in editio, others)
+- All workspace crates compile successfully
+
+
+---
+
+## Loop 16 - Story 2.2: Add HTML output format support
+
+**Date:** 2026-01-22
+**Status:** COMPLETE
+
+### What was done
+- Implemented full HTML5 renderer in editio-html crate (~900 lines)
+- Integrated KaTeX for math rendering via CDN (client-side rendering)
+- Integrated highlight.js for code syntax highlighting via CDN
+- Added comprehensive responsive CSS with dark mode support
+- Implemented interactive cross-references with anchor links
+- Added proper HTML escaping for security
+- Cross-reference data and citation data integration from editio-core
+- Added HtmlConfig for customization (standalone, dark mode, custom CSS)
+- Auto-numbered figures, tables, equations, theorems, algorithms
+- Responsive design with media queries for print and mobile
+- 28 unit tests in editio-html
+- 12 integration tests in editio-core for HTML output
+
+### Key patterns discovered
+- KaTeX renders math client-side using `$...$` and `$$...$$` delimiters
+- highlight.js needs class="language-X" on code elements
+- CrossRefData and CitationData types need separate definitions for each renderer (HTML, PDF, LaTeX)
+- Markdown allows raw HTML to pass through - don't escape inline HTML tags
+- Use CDN links for external libraries to avoid bundling
+- Responsive CSS uses CSS custom properties (--var) for theming
+
+### HTML features
+- Semantic HTML5 structure with `<main>`, `<header>`, `<figure>`, etc.
+- Responsive viewport meta tag for mobile
+- Media queries for print (@media print) and mobile (@media max-width: 768px)
+- Dark mode via CSS custom properties
+- Float classes for figure positioning
+- Accessible structure with proper heading hierarchy
+
+### Key types/functions added
+- HtmlRenderer: Main renderer with config, crossref_data, citation_data
+- HtmlConfig: Configuration for KaTeX, highlight.js, dark mode, standalone
+- CrossRefData: Map of label -> display text for HTML
+- CitationData: Citation numbers, formatted text, bibliography entries
+- ElementCounters: Track auto-numbering for figures, tables, theorems, etc.
+- escape_html(): Escape &, <, >, ", '
+- dimension_to_css(): Convert Dimension to CSS units
+
+### Files modified
+- crates/editio-html/src/lib.rs (complete rewrite, ~900 lines)
+- crates/editio-core/src/lib.rs (+200 lines for HTML integration and tests)
+- AGENTS.md (+25 lines for HTML renderer documentation)
+- ralph/projects/editio/prd.json (marked 2.2 as complete)
+
+### Test results
+- 290 tests pass (28 in editio-html, 89 in editio-core, 45 in editio-parser, 24 in editio-bib, 22 in editio-pdf, 22 in editio-latex, 17 in editio-layout, 15 in editio-plugin, 8 in editio, others)
+- All workspace crates compile successfully
+
+
+---
+
+## Loop 17 - Story 2.3: Add Word/DOCX output format support
+
+**Date:** 2026-01-22
+**Status:** COMPLETE
+
+### What was done
+- Implemented full Word/DOCX renderer in editio-word crate (~850 lines)
+- Uses docx-rs library (v0.4.18) for DOCX generation
+- Handles all AST node types: paragraphs, headings, code blocks, lists, tables, figures, math, theorems, algorithms, blockquotes
+- Cross-reference and citation data integration from editio-core
+- Configurable WordConfig with font settings and line spacing
+- Auto-numbered figures, tables, equations, theorems, algorithms, listings
+- Bibliography section rendered at end with numbered entries
+- 26 unit tests in editio-word
+- 11 integration tests in editio-core for Word output
+
+### Key patterns discovered
+- docx-rs pack() method takes a writer (use Cursor<Vec<u8>>), doesn't return bytes directly
+- DOCX files are ZIP archives, start with "PK" bytes
+- Measurements in twips (1/20 of a point, 1440 twips = 1 inch)
+- Run formatting: bold(), italic(), size() in half-points (24 = 12pt)
+- LineSpacing::new().before()/after() for paragraph spacing
+- BreakType::TextWrapping for hard line breaks
+- TableCell width uses WidthType::Dxa (twips)
+
+### Word/DOCX features
+- WordConfig: body_font, heading_font, code_font, font_size, line_spacing
+- Default fonts: Calibri (body), Calibri Light (headings), Consolas (code)
+- Lists: manual bullets ("•") and numbers ("1.")
+- Blockquotes: 720 twip indent (0.5 inch)
+- Tables: Equal column width distribution
+- Code blocks: Monospace font with indentation
+- Math: Italic text placeholder (OMML not implemented)
+- Figures: "[Image: alt]" placeholder with captions
+
+### Files modified
+- crates/editio-word/Cargo.toml (+2 lines for docx-rs and tempfile)
+- crates/editio-word/src/lib.rs (complete rewrite, ~850 lines)
+- crates/editio-core/src/lib.rs (+200 lines for Word integration and tests)
+- AGENTS.md (+25 lines for Word renderer documentation)
+- ralph/projects/editio/prd.json (marked 2.3 as complete)
+
+### Test results
+- 327 tests pass (26 in editio-word, 100 in editio-core, 28 in editio-html, 22 in editio-latex, 45 in editio-parser, 24 in editio-bib, 22 in editio-pdf, 17 in editio-layout, 15 in editio-plugin, 10 in editio-math, 8 in editio, others)
+- All workspace crates compile successfully
+
+
+---
+
+## Loop 18 - Story 2.4: Implement document chaining for multi-file projects
+
+**Date:** 2026-01-22
+**Status:** COMPLETE
+
+### What was done
+- Implemented `compile_files()` function for multi-file compilation in editio-core
+- Added `merge_documents()` function to combine multiple markdown files into one Document
+- Implemented metadata merging with later files able to override earlier ones
+- Keywords from all files are combined (not overwritten)
+- Added `compile_multi()` function for writing multi-file output to file
+- Updated CLI to detect multiple input files and use multi-file compilation
+- Cross-references resolve globally across all files automatically
+- Global sequential numbering works across files (Figure 1 in file1, Figure 2 in file2)
+- Added 14 new integration tests for multi-file compilation
+
+### Key patterns discovered
+- Document merging: parse each file, combine content arrays, merge metadata
+- Metadata override: later files override fields only if they are Some (not default)
+- Keywords special case: use extend() to combine keywords from all files
+- Cross-file references work automatically because we merge into single Document
+- Global numbering works because CrossRefResolver processes the merged document
+
+### CLI usage
+```bash
+# Compile multiple files in order
+editio compile chapter1.md chapter2.md chapter3.md -o book.pdf
+
+# Files are processed in order, combined into single output
+# Cross-references resolve across files
+# First file's metadata used as base, later files can override
+```
+
+### Key types/functions added
+- `compile_files(input_paths, options)` -> Vec<u8> - Compile multiple files
+- `compile_files_with_bib(input_paths, options, bib_content)` -> Vec<u8> - With bibliography
+- `compile_multi(input_paths, output_path, options)` -> () - Write multi-file output
+- `merge_documents(input_paths)` -> Document - Merge multiple files into one Document
+- `merge_metadata(target, source)` - Merge metadata with override semantics
+- `compile_document(doc, options)` -> Vec<u8> - Compile an already-parsed Document
+
+### Files modified
+- Cargo.toml (+1 line for tempfile workspace dependency)
+- crates/editio-core/Cargo.toml (+2 lines for tempfile dev-dependency)
+- crates/editio-core/src/lib.rs (+300 lines for multi-file support and tests)
+- crates/editio/src/main.rs (+25 lines for CLI multi-file support)
+
+### Test results
+- 341 tests pass (114 in editio-core, 45 in editio-parser, 28 in editio-html, 26 in editio-word, 24 in editio-bib, 22 in editio-latex, 22 in editio-pdf, 17 in editio-layout, 15 in editio-plugin, 10 in editio-math, 8 in editio, others)
+- 14 new multi-file tests added
+- All workspace crates compile successfully
+
+
+---
+
+## Loop 19 - Story 2.5: Build template system with inheritance
+
+**Date:** 2026-01-22
+**Status:** COMPLETE
+
+### What was done
+- Implemented comprehensive template system in editio-template crate (~1100 lines)
+- YAML-based template format with full inheritance and composition
+- Built 4 built-in templates: default, ieee, acm, thesis
+- Template inheritance with selective settings override
+- Multi-level inheritance support with circular dependency detection
+- Integrated templates into compilation pipeline via `apply_template()` function
+- Added `TextAlign` enum to editio-ast (Left, Center, Right, Justify)
+- Updated CLI template commands: list, info, install
+- Added 13 new template integration tests in editio-core
+
+### Key patterns discovered
+- Template settings use Option<T> for selective override during merge
+- TemplateSettings.merge_with() applies child settings over parent
+- Parse dimension strings to points: "72pt", "1in", "25.4mm", "2.54cm"
+- Built-in templates created via functions to avoid file dependencies
+- CLI template list shows all available templates with descriptions
+- Template info command shows detailed resolved settings
+
+### Built-in templates
+- `default`: Letter size, single column, 12pt Times New Roman, 1.5x line spacing, APA
+- `ieee`: Letter, two columns (20pt gap), 10pt font, single spacing, Fig. prefix, IEEE citations
+- `acm`: Letter, two columns, 9pt Linux Libertine, ACM-style, CCS keywords
+- `thesis`: Letter, single column, 1.5" left margin for binding, double spacing
+
+### Template YAML format
+```yaml
+name: my-template
+extends: ieee
+description: Custom IEEE variant
+settings:
+  font:
+    size: 11.0
+  page:
+    columns: 1
+```
+
+### Key types/functions added
+- Template: Main template struct with name, extends, settings
+- TemplateSettings: All formatting options (page, margins, font, headings, etc.)
+- TemplateManager: Loads, resolves, and manages templates
+- create_default/ieee/acm/thesis_template(): Built-in template factories
+- apply_template_to_metadata(): Applies template settings to DocumentMetadata
+- parse_dimension_to_points(): Convert "72pt", "1in", etc. to points
+- list_templates(), get_template_info(): Template discovery functions
+
+### Files modified
+- crates/editio-template/Cargo.toml (+1 line for editio-ast dependency)
+- crates/editio-template/src/lib.rs (complete rewrite, ~1100 lines)
+- crates/editio-ast/src/lib.rs (+15 lines for TextAlign enum)
+- crates/editio-core/Cargo.toml (+1 line for editio-template dependency)
+- crates/editio-core/src/lib.rs (+200 lines for template integration and tests)
+- crates/editio-html/src/lib.rs (+3 lines to use TextAlign)
+- crates/editio/src/main.rs (+60 lines for template CLI commands)
+- AGENTS.md (+35 lines for template system documentation)
+
+### Test results
+- 370 tests pass (17 in editio-template, 127 in editio-core, 45 in editio-parser, 28 in editio-html, 26 in editio-word, 24 in editio-bib, 22 in editio-latex, 22 in editio-pdf, 17 in editio-layout, 15 in editio-plugin, others)
+- 13 new template integration tests added
+- All workspace crates compile successfully
+
+
+---
+
+## Loop 20 - Story 2.6: Implement plugin system with WASM runtime
+
+**Date:** 2026-01-22
+**Status:** COMPLETE
+
+### What was done
+- Created editio-plugin-manager crate with wasmtime WASM runtime support (~1250 lines)
+- Implemented WasmPluginManager with full PluginManager trait implementation
+- Added plugin discovery from filesystem paths (walks directories for plugin.json/yaml manifests)
+- Added plugin discovery from Git repositories (clone/fetch with revision support)
+- Implemented full plugin lifecycle: Discovered -> Loaded -> Ready -> Disabled
+- Added PluginManifest struct for on-disk plugin metadata parsing
+- Integrated semver for version compatibility checking
+- Created comprehensive CLI plugin commands: list, install, info, enable, disable, discover
+- Re-exported editio_plugin from plugin-manager for CLI convenience
+- Added 15 unit tests for plugin-manager crate
+
+### Key patterns discovered
+- wasmtime uses Engine/Module/Store/Instance pattern for WASM execution
+- Plugin manifests should use `#[serde(default)]` on all capability fields for partial JSON
+- git2 requires scoping borrows carefully - use blocks `{}` to drop borrows before moving
+- Re-export dependent crates via `pub use crate_name` for consumer convenience
+- WASM Store takes generic state type for host function access
+
+### Plugin manifest format
+```json
+{
+    "name": "plugin-name",
+    "version": "1.0.0",
+    "author": "Author Name",
+    "description": "Plugin description",
+    "entry": "plugin.wasm",
+    "capabilities": {
+        "parser_hooks": true,
+        "ast_hooks": false
+    },
+    "dependencies": [],
+    "keywords": ["tag1", "tag2"]
+}
+```
+
+### Key types added
+- WasmPluginManager: Main plugin manager with WASM runtime
+- WasmPlugin: Loaded WASM plugin with lifecycle management
+- WasmState: State stored in WASM Store for host function access
+- PluginManifest: On-disk manifest representation
+- ManifestCapabilities: Capability flags from manifest
+- ManifestDependency: Dependency declaration from manifest
+- PluginManagerError: Error types for plugin operations
+
+### Files created
+- crates/editio-plugin-manager/Cargo.toml
+- crates/editio-plugin-manager/src/lib.rs (~1250 lines)
+
+### Files modified
+- Cargo.toml (added editio-plugin-manager to workspace)
+- Cargo.lock (added wasmtime, git2, walkdir, semver, tokio dependencies)
+- crates/editio/Cargo.toml (+1 line for editio-plugin-manager dependency)
+- crates/editio/src/main.rs (+300 lines for plugin CLI commands)
+
+### Test results
+- 382 tests pass (15 in editio-plugin-manager, 127 in editio-core, 45 in editio-parser, 28 in editio-html, 26 in editio-word, 24 in editio-bib, 22 in editio-latex, 22 in editio-pdf, 17 in editio-layout, 17 in editio-template, 15 in editio-plugin, 10 in editio-math, 8 in editio, others)
+- 15 new plugin-manager tests added
+- All workspace crates compile successfully
+
+
+---
+
+## Loop 21 - Story 2.7: Implement advanced academic extensions (Phase 2)
+
+**Date:** 2026-01-22
+**Status:** COMPLETE
+
+### What was done
+- Implemented custom list numbering styles (a/b/c, i/ii/iii, A/B/C, (1)/(2), (a)/(b))
+- Added ListStyle enum in editio-ast with format() method for all styles
+- Implemented block quotations with attribution (::: quote directive)
+- Added appendix sections with special numbering (::: appendix directive)
+- Created BlockQuoteWithAttribution and Appendix node types
+- Added AppendixNumberer helper class for A, A.1, B, B.1 numbering
+- Updated all renderers (PDF, HTML, LaTeX, Word) to support new features
+- Fixed recursive parsing issue where nested content was clearing thread-local storage
+- Added 16 new tests for new functionality (list styles, quotes, appendices)
+
+### Key patterns discovered
+- Thread-local storage must be saved/restored during recursive block directive parsing
+- Custom list styles require CSS list-style-type for HTML, enumitem label for LaTeX
+- Appendix numbering uses alphabetic (A, B, C) with subsection reset
+- Block quotes with attribution need em-dash prefix for author line
+
+### List style syntax supported
+```markdown
+1. First item
+2. Second item
+<!-- {style=lower-alpha} -->
+```
+Produces: a. First item, b. Second item
+
+Styles: numeric, lower-alpha (a), upper-alpha (A), lower-roman (i), upper-roman (I), paren-alpha ((a)), paren-numeric ((1))
+
+### Block quote with attribution syntax
+```markdown
+::: quote {caption="Albert Einstein"}
+Imagination is more important than knowledge.
+:::
+```
+Or via attribute on standard blockquote:
+```markdown
+> Quote text here.
+<!-- {attribution="Author Name" source="Source"} -->
+```
+
+### Appendix syntax
+```markdown
+::: appendix {#app:data caption="Supplementary Data"}
+Appendix content here with tables, figures, etc.
+:::
+```
+
+### Key types/functions added
+- ListStyle enum: Numeric, LowerAlpha, UpperAlpha, LowerRoman, UpperRoman, ParenLowerAlpha, ParenNumeric
+- ListStyle.format(n): Format a number according to style
+- to_alpha(n, upper): Convert number to letter (1=a, 27=aa)
+- to_roman(n, upper): Convert number to Roman numeral
+- AppendixNumberer: Track appendix letters (A, B, C) and subsections (A.1, A.2)
+- Node::BlockQuoteWithAttribution: Block quote with author and source
+- Node::Appendix: Appendix section with title and content
+- parse_list_style(): Parse style attribute to ListStyle enum
+
+### Files modified
+- crates/editio-ast/src/lib.rs (+100 lines for ListStyle, AppendixNumberer, new nodes)
+- crates/editio-parser/src/lib.rs (+120 lines for quote/appendix directives, list styles)
+- crates/editio-pdf/src/lib.rs (+80 lines for rendering new node types)
+- crates/editio-html/src/lib.rs (+60 lines for new node rendering)
+- crates/editio-latex/src/lib.rs (+50 lines for new node rendering)
+- crates/editio-word/src/lib.rs (+80 lines for new node rendering)
+- crates/editio-layout/src/lib.rs (+30 lines for new node positioning)
+
+### Test results
+- 398 tests pass (16 new tests added)
+- 54 in editio-parser (9 new)
+- 125 in editio-core
+- 28 in editio-html
+- 26 in editio-word
+- 22 in editio-latex
+- 22 in editio-pdf
+- 17 in editio-layout
+- 17 in editio-template
+- Others unchanged
+- All workspace crates compile successfully
+
+
+---
+
+## Loop 22 - Story 2.8: Implement performance optimization features
+
+**Date:** 2026-01-22
+**Status:** COMPLETE
+
+### What was done
+- Added rayon workspace dependency for parallelization
+- Created editio-layout/src/cache.rs with layout caching:
+  - ContentHash for fast content-based hashing using seahash
+  - LayoutCache with LRU eviction and thread-safe access
+  - NodeLayoutCache for fine-grained element caching
+  - global_cache() singleton for cross-compilation caching
+- Created editio-layout/src/parallel.rs with parallel algorithms:
+  - parallel_collect_floats() for parallel float dimension calculation
+  - parallel_estimate_heights() for parallel element height pre-computation
+  - WrapZoneIndex with sorted zones for O(log n) lookup
+  - calculate_layout_parallel() combining all optimizations
+- Created editio-core/src/incremental.rs with incremental compilation:
+  - ChangeTracker for document change detection via content hashes
+  - IncrementalCompiler with layout caching integration
+  - WatchCompiler for file watching with modification time tracking
+  - CompilationStats for performance monitoring
+- Added compile_with_timing() function for benchmarking
+- Updated compile_string_with_bib() to use parallel layout by default
+- Added 35 new tests covering all optimization features
+- Performance target met: <500ms for typical academic document
+
+### Key patterns discovered
+- rayon's par_iter() adds overhead for small collections - benefit shows on larger documents
+- LayoutCache must handle concurrent access with RwLock for reads, write lock for mutations
+- ContentHash::combine() creates stable hashes from multiple sources via rotate/xor
+- Page offset calculation for zone index: use cumulative offsets array
+- std::sync::OnceLock provides lazy_static-like behavior without external crate
+- WatchCompiler tracks SystemTime for file modification detection
+
+### Key types/functions added
+- ContentHash: 64-bit hash wrapper using seahash
+- LayoutCache: Thread-safe LRU cache with stats tracking
+- CacheStats: hits, misses, evictions, hit_rate()
+- WrapZoneIndex: Sorted zones with page offsets for fast lookup
+- parallel_collect_floats(): Parallel float info gathering
+- parallel_estimate_heights(): Parallel height pre-calculation
+- ChangeTracker: Document and node-level change detection
+- IncrementalCompiler: Cached compilation with stats
+- WatchCompiler: File watching for auto-recompilation
+- compile_with_timing(): Returns (output, time_ms)
+
+### Files created
+- crates/editio-layout/src/cache.rs (~270 lines)
+- crates/editio-layout/src/parallel.rs (~650 lines)
+- crates/editio-core/src/incremental.rs (~500 lines)
+
+### Files modified
+- Cargo.toml (+6 lines for rayon and seahash)
+- crates/editio-layout/Cargo.toml (+2 deps)
+- crates/editio-layout/src/lib.rs (+50 lines for module exports)
+- crates/editio-core/Cargo.toml (+2 deps)
+- crates/editio-core/src/lib.rs (+295 lines for optimized compilation and tests)
+- AGENTS.md (+15 lines for performance optimization docs)
+
+### Test results
+- 433 tests pass (35 new tests added)
+- 146 in editio-core (14 new)
+- 31 in editio-layout (14 new cache/parallel tests)
+- All workspace crates compile successfully
+- Performance benchmarks pass
+
+
+---
+
+## Loop 23 - Story 2.9: Create extended template library for academic journals
+
+**Date:** 2026-01-22
+**Status:** COMPLETE
+
+### What was done
+- Added 14 new templates to editio-template crate (18 total templates)
+- IEEE variants: ieee-journal (single column for submission), ieee-trans (Transactions format)
+- ACM variants: acm-sigconf (SIGCONF proceedings), acm-sigplan (SIGPLAN proceedings)
+- Thesis variants: thesis-mit (MIT format), thesis-stanford (Stanford format), thesis-oxford (Oxford/A4)
+- Medical journals: pediatrics (AAP format), jbc (JBC format), jci (JCI format)
+- Science journals: nature (Nature journal), science (Science/AAAS), plos (PLoS ONE), elsevier (Elsevier generic)
+- All templates properly inherit from base templates using extends
+- Added 16 new template tests for all variants
+- Fixed flaky timing test in editio-core (test_compilation_stats_tracking)
+- Updated AGENTS.md with comprehensive template documentation
+
+### Key patterns discovered
+- Templates use inheritance (extends) to share common settings
+- Medical journals typically use Vancouver/AMA citation styles
+- Submission formats are often single-column double-spaced, publication formats are two-column
+- European journals (Nature, Elsevier) use A4 paper vs US Letter
+- No section numbering is common for many journal formats
+- Different keywords labels: "Keywords:", "Key Words:", "Index Terms—", "CCS Concepts:"
+
+### Templates added
+| Template | Base | Columns | Paper | Special Features |
+|----------|------|---------|-------|------------------|
+| ieee-journal | ieee | 1 | Letter | Double-spaced submission |
+| ieee-trans | ieee | 2 | Letter | Roman numeral sections |
+| acm-sigconf | acm | 2 | Letter | CCS Concepts keywords |
+| acm-sigplan | acm | 2 | Letter | Inconsolata code font |
+| thesis-mit | thesis | 1 | Letter | Computer Modern, 1.5x |
+| thesis-stanford | thesis | 1 | Letter | 1.25" top/bottom margins |
+| thesis-oxford | thesis | 1 | A4 | 40mm binding margin, Chicago |
+| pediatrics | default | 1 | Letter | AMA style, "Key Words:" |
+| jbc | default | 2 | Letter | FIGURE/TABLE prefixes |
+| jci | default | 2 | Letter | Helvetica, Vancouver |
+| nature | default | 2 | A4 | Fig. prefix, no indent |
+| science | default | 2 | Letter | Helvetica, "References and Notes" |
+| plos | default | 1 | Letter | Vancouver, submission format |
+| elsevier | default | 1 | A4 | Section numbering enabled |
+
+### Files modified
+- crates/editio-template/src/lib.rs (+720 lines for 14 new templates and 16 tests)
+- crates/editio-core/src/lib.rs (fixed flaky timing test)
+- AGENTS.md (+20 lines for extended template documentation)
+- ralph/projects/editio/prd.json (marked 2.9 complete)
+
+### Test results
+- 449 tests pass (16 new in editio-template)
+- 33 in editio-template (16 new)
+- 146 in editio-core
+- All workspace crates compile successfully
+
+
+---
+
+## Loop 24 - Story 2.10: Build IDE integration and development tools
+
+**Date:** 2026-01-22
+**Status:** COMPLETE
+
+### What was done
+- Created editio-lsp crate with Language Server Protocol implementation using tower-lsp
+- LSP provides: diagnostics, hover, go-to-definition, references, document symbols, completions
+- Cross-reference validation detects unresolved labels and generates diagnostics
+- Document synchronization tracks open documents and updates on change
+- Completions suggest cross-reference labels with '@' trigger
+- Created VSCode extension (editors/vscode/) with:
+  - TextMate grammar for syntax highlighting (YAML front matter, block directives, math, cross-refs, citations)
+  - Language configuration (bracket matching, auto-closing, folding)
+  - LSP client integration
+  - Commands: compile, preview, watch, stopWatch
+- Added 'editio lsp' CLI command to start LSP server
+- Added 'editio watch' CLI command for auto-recompilation on file changes
+- Watch mode uses notify crate for file system monitoring with debounce
+- Updated AGENTS.md with LSP and VSCode extension documentation
+- 7 new tests in editio-lsp
+
+### Key patterns discovered
+- tower-lsp uses async_trait for LSP trait implementation
+- LSP server communicates via stdio transport with JSON-RPC
+- TextMate grammars use scopeName hierarchy for syntax nesting
+- VSCode extension uses vscode-languageclient for LSP integration
+- Watch mode needs debounce to avoid multiple compilations on rapid saves
+- Node::Image has label and caption in attrs field, not directly on the node
+
+### Files created
+- crates/editio-lsp/Cargo.toml
+- crates/editio-lsp/src/lib.rs (~900 lines)
+- editors/vscode/package.json
+- editors/vscode/language-configuration.json
+- editors/vscode/tsconfig.json
+- editors/vscode/.gitignore
+- editors/vscode/src/extension.ts
+- editors/vscode/syntaxes/editio.tmLanguage.json
+- editors/vscode/syntaxes/editio-codeblock.tmLanguage.json
+
+### Files modified
+- Cargo.toml (added editio-lsp, tokio, tower-lsp, notify, dashmap workspace deps)
+- crates/editio/Cargo.toml (+editio-lsp and tokio deps)
+- crates/editio/src/main.rs (+Lsp and Watch commands)
+- AGENTS.md (+LSP and VSCode extension documentation)
+
+### Test results
+- 456 tests pass (7 in editio-lsp, 449 in other crates)
+- All workspace crates compile successfully
+
+
+
+---
+
+## Loop 25 - Story 2.11: Implement import/export functionality
+
+**Date:** 2026-01-22
+**Status:** COMPLETE
+
+### What was done
+- Created editio-import crate (~1800 lines) with format converters for:
+  - Pandoc markdown (fenced divs, bracketed spans, inline notes, citations)
+  - LaTeX (sections, math environments, theorems, citations, cross-refs)
+  - Word/DOCX (headings from styles, text formatting, tables, lists)
+  - Typst (headings, formatting, math, links, figures, references)
+- Implemented FormatConverter trait for consistent converter interface
+- Added ImportOptions for configuring conversion behavior
+- Created detect_format() for auto-detection based on content
+- Added CLI 'editio import' command with format auto-detection
+- Export already supported via existing editio-latex, editio-html, editio-word renderers
+- 42 new tests for import functionality
+- Updated AGENTS.md with import system documentation
+
+### Key patterns discovered
+- regex crate does NOT support backreferences (\1) - must duplicate pattern instead
+- In regex replacement, $$ means a literal $ - use $$$$ for two dollar signs
+- DOCX files are ZIP archives - use zip crate to extract document.xml
+- quick-xml Reader.trim_text() for simpler whitespace handling
+- Format detection based on content (magic bytes, keywords) more reliable than extension
+
+### Import conversion strategies
+- Pandoc: Mostly compatible - convert fenced divs to block directives
+- LaTeX: Extract between \begin{document} and \end{document}, convert commands
+- DOCX: Parse XML structure, detect styles for headings/lists
+- Typst: Convert = headings, *bold*, _italic_, @refs, <labels>
+
+### Files created
+- crates/editio-import/Cargo.toml
+- crates/editio-import/src/lib.rs
+- crates/editio-import/src/pandoc.rs
+- crates/editio-import/src/latex.rs
+- crates/editio-import/src/docx.rs
+- crates/editio-import/src/typst.rs
+
+### Files modified
+- Cargo.toml (added editio-import, regex, zip, quick-xml workspace deps)
+- crates/editio/Cargo.toml (+editio-import dep)
+- crates/editio/src/main.rs (+Import command handler)
+- AGENTS.md (+import system documentation)
+
+### Test results
+- 498 tests pass (42 new in editio-import)
+- All workspace crates compile successfully
+
+
+---
+
+## Loop 26 - Story 2.12: Build advanced document features
+
+**Date:** 2026-01-22
+**Status:** COMPLETE
+
+### What was done
+- Implemented table of contents auto-generation with generate_toc() and generate_toc_with_pages()
+- Added list of figures generation with FigureEntry struct and page number support
+- Added list of tables generation with TableEntry struct and page number support
+- Implemented index generation with IndexEntry struct and alphabetical grouping
+- Added Color type with RGB support, hex conversion, and named color constants
+- Added Inline::Colored variant for colored text spans in all renderers
+- Added Inline::IndexTerm variant for marking index entries
+- Added HeaderFooterConfig with even/odd page support and first page differentiation
+- Created HeaderFooterContent with left/center/right sections and placeholders
+- Added Node::TableOfContents, ListOfFigures, ListOfTables, Index placeholder nodes
+- Updated all renderers (PDF, HTML, LaTeX, Word) to handle new node and inline types
+- Created editio-core/docgen.rs module with all generation functions
+- Added 16 new tests covering all new functionality
+
+### Key patterns discovered
+- TOC/LoF/LoT entries need TocEntry/FigureEntry/TableEntry structs with page numbers
+- Index terms should be invisible in output (zero width in layout)
+- Header/footer placeholders: {page}, {pages}, {title}, {author}, {date}
+- Color conversion: RGB (0-255) -> normalized (0.0-1.0) for PDF rendering
+- Placeholder nodes need layout space estimation before actual content is known
+- When adding new Node/Inline variants, must update ALL match expressions across crates:
+  - editio-layout/lib.rs, editio-layout/parallel.rs
+  - editio-pdf/lib.rs, editio-html/lib.rs, editio-latex/lib.rs, editio-word/lib.rs
+  - editio-core/incremental.rs (hash_node, hash_inline)
+
+### Types added
+- Color: RGB color with hex conversion and named constants
+- HeaderFooterConfig: Configuration for even/odd/first page headers/footers
+- HeaderFooterContent: Left/center/right sections with placeholder support
+- TocEntry: Table of contents entry with level, text, number, page, label
+- FigureEntry: List of figures entry with number, caption, page, label
+- TableEntry: List of tables entry with number, caption, page, label
+- IndexEntry: Index entry with term, subterm, and page numbers
+
+### Files created
+- crates/editio-core/src/docgen.rs (~520 lines)
+
+### Files modified
+- crates/editio-ast/src/lib.rs (+250 lines for new types)
+- crates/editio-core/src/incremental.rs (+30 lines for hashing new types)
+- crates/editio-core/src/lib.rs (+15 lines for docgen exports)
+- crates/editio-html/src/lib.rs (+180 lines for rendering new features)
+- crates/editio-latex/src/lib.rs (+50 lines for new node types)
+- crates/editio-layout/src/lib.rs (+40 lines for placeholder positioning)
+- crates/editio-layout/src/parallel.rs (+15 lines for new node heights)
+- crates/editio-pdf/src/lib.rs (+340 lines for TOC/LoF/LoT/Index/color rendering)
+- crates/editio-word/src/lib.rs (+50 lines for new node types)
+- AGENTS.md (+45 lines for document generation documentation)
+
+### Test results
+- 514 tests pass (16 new in editio-ast and editio-core)
+- All workspace crates compile successfully
+
+
+---
+
+## Loop 27 - Story 3.1: Build native math renderer to replace pdflatex
+
+**Date:** 2026-01-22
+**Status:** COMPLETE
+
+### What was done
+- Created comprehensive native math rendering system in editio-math crate
+- Implemented LaTeX math tokenizer (tokenizer.rs):
+  - Token enum: Char, Command, Number, OpenBrace, CloseBrace, Superscript, Subscript, etc.
+  - Handles all LaTeX math syntax including \\ for line breaks
+- Built math expression AST (ast.rs):
+  - MathNode enum: Row, Symbol, Number, Text, Superscript, Subscript, Fraction, Root, Delimited, Operator, Accent, Matrix, Aligned, Cases, Space
+  - MathSymbol: Greek letters, operators, relations, arrows, punctuation
+  - OperatorKind: sum, prod, int, iint, iiint, oint, lim, sin, cos, etc.
+  - Delimiter: Paren, Bracket, Brace, Vert, DoubleVert, Angle, Floor, Ceil
+  - AccentKind: Hat, Tilde, Vec, Bar, Dot, Ddot, Overline, etc.
+- Created recursive descent parser (parser.rs):
+  - Parses all LaTeX math constructs
+  - Handles \frac{}{}, \sqrt{}, \sqrt[n]{}, \left...\right
+  - Supports matrix environments (pmatrix, bmatrix, vmatrix, etc.)
+  - Parses aligned equations and cases environments
+- Implemented TeX-like box model layout engine (layout.rs):
+  - MathBox with width, height, depth, x, y positioning
+  - BoxContent: Glyph, Text, HBox, VBox, FractionLine, Radical, Delimiter, AccentMark
+  - LayoutContext with font size, style (Display, Text, Script, ScriptScript)
+  - Proper baseline handling and script positioning
+- Created rendering output module (render.rs):
+  - RenderInstruction enum: DrawGlyph, DrawText, DrawLine, DrawRadical, DrawDelimiter, DrawAccent
+  - render_box() generates positioning instructions
+  - instructions_to_unicode() for text output
+  - latex_to_unicode() convenience function
+- Updated MathRenderer to use native rendering instead of pdflatex subprocess
+- Eliminated external pdflatex dependency
+- Added 42 new tests (52 total in editio-math)
+
+### Key patterns discovered
+- Box model layout: height above baseline, depth below baseline
+- Script contexts reduce font size progressively (Display -> Text -> Script -> ScriptScript)
+- Fraction layout: numerator/denominator centered around math axis
+- Matrix layout: calculate column widths and row heights, then position cells
+- Tokenizer preserves whitespace for \text{} parsing
+
+### Supported math features
+- Greek letters: α, β, γ, δ, ε, ζ, η, θ, ι, κ, λ, μ, ν, ξ, π, ρ, σ, τ, υ, φ, χ, ψ, ω
+- Uppercase Greek: Γ, Δ, Θ, Λ, Ξ, Π, Σ, Υ, Φ, Ψ, Ω
+- Binary operators: +, −, ×, ÷, ·, ±, ∓, ∧, ∨, ∩, ∪, ⊕, ⊗
+- Relations: =, ≠, <, >, ≤, ≥, ≈, ≡, ⊂, ⊃, ⊆, ⊇, ∈, ∋
+- Arrows: →, ←, ↔, ⇒, ⇐, ⇔, ↦
+- Large operators: ∑, ∏, ∫, ∬, ∭, ∮, ⋃, ⋂
+- Text operators: lim, sup, inf, max, min, log, ln, sin, cos, tan, etc.
+- Fractions: \frac{a}{b}, \dfrac{a}{b}
+- Roots: \sqrt{x}, \sqrt[n]{x}
+- Delimiters: \left( \right), \left[ \right], \left\{ \right\}
+- Accents: \hat{x}, \vec{v}, \bar{x}, \tilde{y}, \dot{x}, \ddot{x}
+- Matrices: matrix, pmatrix, bmatrix, Bmatrix, vmatrix, Vmatrix
+- Environments: aligned, cases
+
+### Files created
+- crates/editio-math/src/tokenizer.rs (~200 lines)
+- crates/editio-math/src/ast.rs (~400 lines)
+- crates/editio-math/src/parser.rs (~900 lines)
+- crates/editio-math/src/layout.rs (~750 lines)
+- crates/editio-math/src/render.rs (~200 lines)
+
+### Files modified
+- crates/editio-math/src/lib.rs (complete rewrite, ~500 lines)
+- AGENTS.md (+20 lines for native math rendering documentation)
+
+### Test results
+- 557 tests pass (42 new in editio-math)
+- 52 tests in editio-math
+- All workspace crates compile successfully
+
+
+---
+
+## Loop 28 - Story 3.2: Implement comprehensive error handling and edge cases
+
+**Date:** 2026-01-22
+**Status:** COMPLETE
+
+### What was done
+- Created comprehensive errors module (editio-core/src/errors.rs) with:
+  - DocumentValidator for document-level validation with warning collection
+  - ValidationWarning with categories (CrossReference, Citation, Image, Table, Math, FrontMatter, Structure, Plugin)
+  - SourceLocation for file/line/column error context
+  - CircularIncludeError for multi-file include detection with chain display
+  - DetailedParseError with helpful suggestions for YAML and syntax errors
+  - DetailedBibError with required field information by entry type
+  - Levenshtein distance calculation for typo suggestions in labels/citations
+  - validate_front_matter() for YAML front matter validation
+- Added new compilation functions:
+  - compile_with_validation() returns CompilationResult with output, warnings, and timing
+  - validate_document() for quick validation without full compilation
+  - compile_files_validated() with circular include detection
+- Validation features:
+  - Unresolved cross-reference detection with label suggestions
+  - Undefined citation detection with similar key suggestions
+  - Table column consistency checking
+  - Math syntax validation (unbalanced braces, \left/\right, \begin/\end)
+  - Missing image file detection
+  - YAML front matter validation (page_size, margins, font_size, line_height)
+- 37 new tests added
+
+### Key patterns discovered
+- Use raw strings (r"...") for LaTeX command patterns to avoid escape sequence issues
+- Levenshtein distance useful for "did you mean?" suggestions
+- Warning categories help organize and filter validation messages
+- Validation should be non-fatal - collect warnings but allow compilation to continue
+- Process inline content to extract cross-refs before validation
+
+### Key types added
+- DocumentValidator: Collects warnings during document validation
+- ValidationWarning: Warning with category, message, location, suggestion
+- WarningCategory: Enum for warning types (CrossReference, Citation, Image, Table, Math, etc.)
+- SourceLocation: File, line, column, and context information
+- CircularIncludeError: Tracks include chain for circular dependency detection
+- DetailedParseError: Enhanced parse errors with suggestions
+- DetailedBibError: Bibliography errors with field requirements
+- CompilationResult: Output bytes, warnings, and timing
+
+### Files created
+- crates/editio-core/src/errors.rs (~1070 lines)
+
+### Files modified
+- crates/editio-core/src/lib.rs (+350 lines for integration and tests)
+- ralph/projects/editio/prd.json (marked 3.2 complete)
+
+### Test results
+- 594 tests pass (37 new in editio-core)
+- All workspace crates compile successfully
+
+
+---
+
+## Loop 29 - Story 3.3: Create comprehensive testing and quality assurance
+
+**Date:** 2026-01-22
+**Status:** COMPLETE
+
+### What was done
+- Added 52 new tests (594 -> 646 total workspace tests)
+- Regression tests for figure wrapping with lists (7 tests):
+  - Float left/right with ordered and unordered lists
+  - Nested lists around floated figures
+  - Multiple figures with interleaved lists
+  - Mixed content (paragraphs, lists, code) around figures
+  - Cross-references in lists near floated figures
+  - Long lists at page boundaries
+- Golden file testing for all output formats (10 tests):
+  - HTML output consistency and structure verification
+  - LaTeX output consistency and structure verification
+  - Word output consistency (size-based) and ZIP structure
+  - Verify different formats produce different output
+- Stress tests for large documents (9 tests):
+  - 100 sections compilation
+  - 500 paragraphs compilation
+  - 100 figures with auto-numbering
+  - 50 tables with captions
+  - 100 equations with cross-references
+  - Deeply nested structures
+  - Large document all formats test
+  - 1000 cross-references stress test
+- Plugin system tests (8 tests):
+  - PluginMetadata creation
+  - PluginDependency version handling
+  - ParserContext, AstContext, LayoutContext, RenderContext types
+  - LayoutHints struct fields
+  - PluginManagerError types
+  - PluginManifest YAML parsing
+- Extended test corpus (6 tests):
+  - Scientific paper with complex math
+  - Humanities paper with citations and quotes
+  - Technical report with code and algorithms
+  - All formats compilation for each corpus document
+- Visual regression tests (5 tests):
+  - Headings preservation in output
+  - Lists structure preservation
+  - Code blocks preservation
+  - Math content preservation
+  - Tables structure preservation
+- Performance benchmarks (4 tests):
+  - Simple document benchmark (<500ms)
+  - Complex document benchmark (<1000ms)
+  - 10x faster than LaTeX target verification
+  - Incremental vs full compilation comparison
+- Edge case tests (6 tests):
+  - Malformed YAML recovery
+  - Unbalanced delimiters handling
+  - Deeply nested blockquotes
+  - Empty sections handling
+  - Very long line handling (10000 chars)
+  - Unicode-heavy content
+
+### Key patterns discovered
+- Test fixtures should use const strings with descriptive names (FIXTURE_BASIC_ARTICLE, etc.)
+- Plugin API types have specific field structures - use Default::default() or PluginMetadata::new()
+- PluginCapabilities, AstContext, LayoutContext, RenderContext have specific required fields
+- Stress tests should have reasonable time limits (10-30s) to catch performance regressions
+- Golden file tests for Word use size-based comparison due to timestamp differences
+
+### Files modified
+- crates/editio-core/Cargo.toml (+2 lines for editio-plugin and editio-plugin-manager dev-dependencies)
+- crates/editio-core/src/lib.rs (+1214 lines for comprehensive tests)
+
+### Test results
+- 646 tests pass (52 new in editio-core)
+- All workspace crates compile successfully
+- Performance targets met (<1 second for complex documents)
+
+
+
+---
+
+## Loop 30 - Story 3.4: Build plugin ecosystem infrastructure
+
+**Date:** 2026-01-22
+**Status:** COMPLETE
+
+### What was done
+- Created comprehensive plugin ecosystem infrastructure in editio-plugin-manager crate
+- Added registry.rs (~650 lines):
+  - PluginRegistry for central plugin discovery
+  - RegistryCache with keyword/author indexing
+  - SearchQuery builder with filters
+  - Update checking for installed plugins
+  - Test data sync capability
+- Added marketplace.rs (~700 lines):
+  - PluginMarketplace for install/update/remove/publish
+  - Dependency resolution algorithm
+  - Lockfile (plugins.lock.json) for tracking
+  - Local installation support
+  - Batch update functionality
+- Added verification.rs (~750 lines):
+  - PluginVerifier for signature/checksum verification
+  - TrustStore for key/publisher management
+  - Security auditing with AuditResult
+  - Checksum calculation using seahash
+- Added sdk.rs (~600 lines):
+  - Project scaffolding with templates
+  - NewProjectOptions builder
+  - Code generation for plugin projects
+  - Build and documentation utilities
+- Added debug.rs (~650 lines):
+  - HotReloadManager for development
+  - PluginDebugger with event logging
+  - PluginInspector for statistics
+  - PluginProfiler for performance
+- 49 new tests added (696 total workspace tests)
+- Updated AGENTS.md with ecosystem documentation
+
+### Key patterns discovered
+- Plugin ecosystem modules are self-contained with their own tests
+- Use seahash for fast checksums (already a workspace dependency)
+- Security levels ordered: Unknown < Info < Low < Medium < High < Critical
+- Log levels ordered: Off < Error < Warn < Info < Debug < Trace
+- DebugLevel filtering: events with level < threshold are filtered
+
+### Files created
+- crates/editio-plugin-manager/src/registry.rs
+- crates/editio-plugin-manager/src/marketplace.rs
+- crates/editio-plugin-manager/src/verification.rs
+- crates/editio-plugin-manager/src/sdk.rs
+- crates/editio-plugin-manager/src/debug.rs
+
+### Files modified
+- crates/editio-plugin-manager/src/lib.rs (+module declarations and docs)
+- crates/editio-plugin-manager/Cargo.toml (+seahash dependency)
+- AGENTS.md (+ecosystem documentation)
+
+### Test results
+- 696 tests pass (49 new in editio-plugin-manager modules)
+- All workspace crates compile successfully
+

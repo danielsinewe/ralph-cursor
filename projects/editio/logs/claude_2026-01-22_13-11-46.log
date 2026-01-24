@@ -1,0 +1,35 @@
+## Summary
+
+I've completed **Story 2.1: Add LaTeX output format support**.
+
+### What was implemented:
+1. **Full LaTeX renderer** in `editio-latex` crate (~850 lines)
+   - All AST node types: paragraphs, headings, code, lists, tables, figures, math, theorems, algorithms
+   - Proper special character escaping
+   - Auto-generated preamble with required packages
+   - Cross-reference support via `\label`/`\ref`
+   - Citation support via `\cite`
+
+2. **Fixed inline text processing** in `editio-core`
+   - Join adjacent Text nodes before extraction (pulldown-cmark splits at brackets)
+   - Added inline math `$...$` extraction during text processing
+
+3. **Updated AGENTS.md** with LaTeX renderer patterns
+
+### Test results:
+- **253 total tests passing** (22 new in editio-latex, 11 new in editio-core)
+- All workspace crates compile successfully
+
+### Commit:
+- `feat: [2.1] - Add LaTeX output format support`
+- Committed locally (no remote configured to push)
+
+---RALPH_STATUS---
+STATUS: COMPLETE
+TASKS_COMPLETED_THIS_LOOP: 1
+FILES_MODIFIED: 3
+TESTS_STATUS: PASSING
+WORK_TYPE: IMPLEMENTATION
+EXIT_SIGNAL: false
+RECOMMENDATION: Continue with next story 2.2 (Add HTML output format support)
+---END_RALPH_STATUS---

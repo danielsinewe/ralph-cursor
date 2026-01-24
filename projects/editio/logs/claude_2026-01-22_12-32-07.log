@@ -1,0 +1,41 @@
+## Summary
+
+**Story 1.10: Build table support with markdown tables** - COMPLETED
+
+### What was implemented:
+1. **PDF Table Captions**: Updated `render_table()` to display "Table N: Caption" format below tables
+2. **Cross-reference Integration**: Tables with `tbl:` labels now resolve via the CrossRefResolver system
+3. **Alignment Support**: Verified left, center, right column alignment works correctly
+
+### Table Syntax Supported:
+```markdown
+| Left | Center | Right |
+|:-----|:------:|------:|
+| a    | b      | c     |
+<!-- {#tbl:data caption="Sample Data"} -->
+
+See [@tbl:data] for details.
+```
+
+### Tests Added (7 new):
+- Parser: `test_parse_table_with_attributes`, `test_parse_table_with_alignment`, `test_parse_table_with_label_only`
+- Integration: `test_compile_table_with_caption_and_cross_reference`, `test_table_numbering_resolution`, `test_compile_multiple_tables_with_cross_references`, `test_table_alignment_parsing`
+
+### Files Modified:
+- `crates/editio-pdf/src/lib.rs` (+41 lines)
+- `crates/editio-parser/src/lib.rs` (+50 lines)
+- `crates/editio-core/src/lib.rs` (+82 lines)
+
+### Test Results:
+- 165 tests pass (up from 158)
+- All workspace crates compile successfully
+
+---RALPH_STATUS---
+STATUS: COMPLETE
+TASKS_COMPLETED_THIS_LOOP: 1
+FILES_MODIFIED: 3
+TESTS_STATUS: PASSING
+WORK_TYPE: IMPLEMENTATION
+EXIT_SIGNAL: false
+RECOMMENDATION: Continue with story 1.11 - Implement document formatting with YAML front matter
+---END_RALPH_STATUS---

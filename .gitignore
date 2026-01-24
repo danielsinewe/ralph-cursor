@@ -1,12 +1,3 @@
-# Projects folder - keep private (but allow PRD files)
-projects/*
-!projects/**/
-projects/**/*
-!projects/**/prd.md
-
-# Logs
-*.log
-logs/
 
 # OS files
 .DS_Store
